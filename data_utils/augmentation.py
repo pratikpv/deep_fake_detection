@@ -16,7 +16,8 @@ def apply_blur_to_image(image, augmentation_param):
     return cv2.blur(image, augmentation_param['ksize'])
 
 
-def apply_noise_to_image(image=None, augmentation_param=None, mode=None):
+def apply_noise_to_image(image=None, augmentation_param=None):
+    mode = augmentation_param['noise_type']
     image = random_noise(image, mode=mode)
     image = np.array(255 * image, dtype=np.uint8)
     return image
@@ -54,7 +55,7 @@ def apply_graysclae_to_image(image, augmentation_param):
 
 
 def get_supported_augmentation_methods():
-    return augmentation_mapping.keys()
+    return list(augmentation_mapping.keys())
 
 
 def get_random_blur_value():
@@ -71,7 +72,7 @@ def get_random_brightness_value():
 
 
 def get_random_angle_value():
-    return random.randint(-20, 20)
+    return random.randint(-15, 15)
 
 
 def get_supported_res_value():
@@ -100,8 +101,8 @@ def apply_rescale_to_image(image, augmentation_param):
     return cv2.resize(image, res, interpolation=cv2.INTER_AREA)
 
 
+"""
 augmentation_mapping = {
-    'blur': apply_blur_to_image,
     'gaussian': partial(apply_noise_to_image, mode='gaussian'),
     'speckle': partial(apply_noise_to_image, mode='speckle'),
     's&p': partial(apply_noise_to_image, mode='s&p'),
@@ -109,6 +110,17 @@ augmentation_mapping = {
     'salt': partial(apply_noise_to_image, mode='salt'),
     'poisson': partial(apply_noise_to_image, mode='poisson'),
     'localvar': partial(apply_noise_to_image, mode='localvar'),
+    'blur': apply_blur_to_image,
+    'contrast': apply_contrast_to_image,
+    'brightness': apply_brightness_to_image,
+    'rotation': apply_rotation_to_image,
+    'flip_horizontal': apply_flip_horizontal,
+    'rescale': apply_rescale_to_image,
+}
+"""
+augmentation_mapping = {
+    'noise': apply_noise_to_image,
+    'blur': apply_blur_to_image,
     'contrast': apply_contrast_to_image,
     'brightness': apply_brightness_to_image,
     'rotation': apply_rotation_to_image,
@@ -117,7 +129,73 @@ augmentation_mapping = {
 }
 
 
+def get_supported_noise_types():
+    return ['gaussian', 'speckle', 's&p', 'pepper', 'salt', 'poisson', 'localvar']
+
+
+def get_random_noise_type():
+    return random.choice(get_supported_noise_types())
+
+
+def get_random_noise_setting():
+    return {'noise_type': random_setting}
+
+def get_noise_param_setting(type):
+    return {'noise_type': type}
+
+def get_random_blur_setting():
+    return {'ksize': random_setting}
+
+
+def get_random_contrast_setting():
+    return {'contrast_value': random_setting}
+
+
+def get_random_brightness_setting():
+    return {'brightness_value': random_setting}
+
+
+def get_random_rotation_setting():
+    return {'angle': random_setting}
+
+
+def get_random_rescale_setting():
+    return {'res': random_setting}
+
+
+def get_augmentation_setting_by_type(type=None):
+    noise_list = get_supported_noise_types()
+    if type in noise_list:
+        return None
+    if type == 'noise':
+        return get_random_noise_setting()
+    if type == 'blur':
+        return get_random_blur_setting()
+    if type == 'contrast':
+        return get_random_contrast_setting()
+    if type == 'brightness':
+        return get_random_brightness_setting()
+    if type == 'rotation':
+        return get_random_rotation_setting()
+    if type == 'flip_horizontal':
+        return None
+    if type == 'rescale':
+        return get_random_rescale_setting()
+
+    raise Exception("Unknown type of augmentation given")
+
+
+def get_random_augmentation():
+    augmentation_type = random.choice(get_supported_augmentation_methods())
+    return augmentation_type, get_augmentation_setting_by_type(augmentation_type)
+
+
 def prepare_augmentation_param(augmentation, augmentation_param, frame_num, res):
+    if augmentation == 'noise':
+        if frame_num == 0:
+            if augmentation_param['noise_type'] == random_setting:
+                augmentation_param['noise_type'] = get_random_noise_type()
+
     if augmentation == 'blur':
         if frame_num == 0:
             if augmentation_param['ksize'] == random_setting:
@@ -147,9 +225,11 @@ def prepare_augmentation_param(augmentation, augmentation_param, frame_num, res)
 
 
 def apply_augmentation_to_videofile(input_video_filename, output_video_filename, augmentation=None,
-                                    augmentation_param=None, save_intermdt_files=False):
+                                    augmentation_param=None, save_intermdt_files=True):
     # t = time.time()
-    if augmentation in get_supported_augmentation_methods():
+    list_of_aug = get_supported_augmentation_methods()
+    list_of_aug.extend(get_supported_noise_types())
+    if augmentation in list_of_aug:
         augmentation_func = augmentation_mapping[augmentation]
     else:
         raise Exception("Unknown augmentation supplied")
@@ -185,7 +265,7 @@ def apply_augmentation_to_videofile(input_video_filename, output_video_filename,
 
         if save_intermdt_files:
             out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
-            print(f'saving {out_image_name}')
+            #print(f'saving {out_image_name}')
             cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
         frames.append(frame)

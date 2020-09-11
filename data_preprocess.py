@@ -6,41 +6,37 @@ import data_utils.distractions as distractions
 import os
 import cv2
 from utils import *
-import glob
+from glob import glob
 from data_utils.utils import *
 
 
-def test_data_augmentation():
-    inp = '/home/therock/dfdc/train/dfdc_train_part_19/jexvqmufit.mp4'
-    outp_root = '/home/therock/dfdc/test_augmentation/'
-    os.makedirs(outp_root, exist_ok=True)
+def test_data_augmentation(input_file, output_folder):
+    os.makedirs(output_folder, exist_ok=True)
 
-    methods = [
-        # ('blur', {'ksize': (10, 10)}),
-        # ('gaussian', None),
-        # ('speckle', None),
-        # ('s&p', None),
-        # ('pepper', None),
-        # ('salt', None),
-        # ('poisson', None),
-        # ('localvar', None)
-        # ('contrast', {'contrast_value': -20})
-        # ('brightness', {'brightness_value': 20})
-        # ('rotation', {'angle': random_setting})
-        # ('flip_horizontal', None)
-        ('rescale', {'res': random_setting})
-    ]
+    augmentation_methods = augmentation.get_supported_augmentation_methods()
+    augmentation_methods.remove('noise')
+    augmentation_param = [augmentation.get_augmentation_setting_by_type(m) for m in augmentation_methods]
+    noise_methods = augmentation.get_supported_noise_types()
+    noise_methods_param = [augmentation.get_noise_param_setting(m) for m in noise_methods]
+    augmentation_methods.extend(['noise'] * len(noise_methods))
+    augmentation_param.extend(noise_methods_param)
 
-    out_id = os.path.splitext(os.path.basename(inp))[0]
+    augmentation_plan = list(zip(augmentation_methods, augmentation_param))
+
+    out_id = os.path.splitext(os.path.basename(input_file))[0]
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         results = []
-        for aug in methods:
+        for aug in augmentation_plan:
             aug_func, aug_param = aug
-            outfile = os.path.join(outp_root, out_id + '_' + aug_func + '.mp4')
+            if aug_func == 'noise':
+                suffix = out_id + '_' + aug_func + '_' + aug_param['noise_type']
+            else:
+                suffix = out_id + '_' + aug_func
+            outfile = os.path.join(output_folder, suffix + '.mp4')
             jobs.append(pool.apply_async(augmentation.apply_augmentation_to_videofile,
-                                         (inp, outfile,),
-                                         dict(augmentation_param=aug_param, augmentation=aug_func)
+                                         (input_file, outfile,),
+                                         dict(augmentation=aug_func, augmentation_param=aug_param)
                                          )
                         )
 
@@ -48,11 +44,9 @@ def test_data_augmentation():
             results.append(job.get())
 
 
-def locate_faces():
-    input_root = '/home/therock/dfdc/test_augmentation/'
-    output_root = os.path.join(input_root, 'tracked')
+def locate_faces(input_root, output_root):
     os.makedirs(output_root, exist_ok=True)
-    input_filepath_list = glob.glob(input_root + '/*.mp4')
+    input_filepath_list = glob(input_root + '/*.mp4')
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         results = []
@@ -67,111 +61,37 @@ def locate_faces():
             results.append(job.get())
 
 
-def test_data_distraction():
-    inp = '/home/therock/dfdc/train/dfdc_train_part_19/jexvqmufit.mp4'
-    outp_root = '/home/therock/dfdc/test_distraction/'
-    os.makedirs(outp_root, exist_ok=True)
+def test_data_distraction(input_file, output_folder):
+    os.makedirs(output_folder, exist_ok=True)
 
-    """
-    Sample paramas. Use '$RANDOM$' as value for any key to select random value
-    
-    static_text_param = {
-        'text': 'pratik',
-        'loc': (10, 250),
-        'color': (255, 0, 0),
-        'fontScale': 3,
-        'thickness': 3,
-    }
-    
-    text_dir: l_to_r, r_to_l, t_to_b, b_to_t
-    rolling_text_param = {
-        'text': '$RANDOM$',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'fontScale': '$RANDOM$',
-        'thickness': '$RANDOM$',
-        'text_dir': 'l_to_r'
-    }
-    
-    """
+    distraction_methods = distractions.get_supported_distraction_methods()
+    distraction_params = [distractions.get_distractor_setting_by_type(m) for m in distraction_methods]
+    distraction_plan = list(zip(distraction_methods, distraction_params))
+    out_id = os.path.splitext(os.path.basename(input_file))[0]
+    pprint(distraction_plan)
 
-    static_text_param = {
-        'text': '$RANDOM$',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'fontScale': '$RANDOM$',
-        'thickness': '$RANDOM$'
-    }
-    spontaneous_text_param = {
-        'text': '$RANDOM$',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'fontScale': '$RANDOM$',
-        'thickness': '$RANDOM$',
-        'rate': 0.1
-    }
-
-    spontaneous_shape_param = {
-        'shape': 'rectangle',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'size': 'large',
-        'rate': 0.1
-    }
-
-    rolling_text_param = {
-        'text': '$RANDOM$',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'fontScale': '$RANDOM$',
-        'thickness': '$RANDOM$',
-        'rolling_dir': 'b_to_t'
-    }
-
-    static_shape_param = {
-        'shape': 'rectangle',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'size': 'large'
-    }
-
-    rolling_shape_param = {
-        'shape': 'circle',
-        'loc': '$RANDOM$',
-        'color': '$RANDOM$',
-        'size': 'large',
-        'rolling_dir': 'b_to_t'
-    }
-
-    methods = [
-        # ('static_text', static_text_param),
-        # ('rolling_text', rolling_text_param),
-        # ('static_shape', static_shape_param),
-        # ('rolling_shape', rolling_shape_param),
-        # ('spontaneous_text', spontaneous_text_param),
-        ('spontaneous_shape', spontaneous_shape_param)
-    ]
-
-    out_id = os.path.splitext(os.path.basename(inp))[0]
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         results = []
-        for distract in methods:
+        for distract in distraction_plan:
             distract_func, distract_param = distract
-            outfile = os.path.join(outp_root, out_id + '_' + distract_func + '.mp4')
+            outfile = os.path.join(output_folder, out_id + '_' + distract_func + '.mp4')
             jobs.append(pool.apply_async(distractions.apply_distraction_to_videofile,
-                                         (inp, outfile,),
+                                         (input_file, outfile,),
                                          dict(distraction=distract_func, distraction_param=distract_param)
                                          ))
 
-        for job in tqdm(jobs, desc="Applying augmentation"):
+        for job in tqdm(jobs, desc="Applying distraction"):
             results.append(job.get())
 
 
 def main():
-    # data_augmentation()
-    # locate_faces()
-     data_distraction()
+    input_file = '/home/therock/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
+    aug_output_folder = '/home/therock/dfdc/test_augmentation/'
+    output_track_folder = os.path.join(aug_output_folder, 'tracked')
+    test_data_augmentation(input_file, aug_output_folder)
+    test_data_distraction(input_file, aug_output_folder)
+    locate_faces(aug_output_folder, output_track_folder)
 
 
 if __name__ == '__main__':

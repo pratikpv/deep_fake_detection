@@ -146,6 +146,10 @@ def get_updated_loc(rolling_dir, x, y, image_width, image_height, pixel_delta=10
     return x, y
 
 
+def get_random_spontaneous_rate():
+    return random.randint(10, 50)
+
+
 def prepare_distraction_param(distraction, distraction_param, frame_num, res):
     # print(distraction)
     # print(distraction_param)
@@ -182,12 +186,12 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
                 if distraction_param['rolling_dir'] == random_setting:
                     distraction_param['rolling_dir'] = random.choice(get_supported_rolling_dir())
                 if distraction_param['rolling_dir'] not in get_supported_rolling_dir():
-                    raise Exception("Unsupported text_dir given for rolling text distractor")
+                    raise Exception("Unsupported rolling_dir given for rolling text distractor")
         else:
             # get new loc for each frames
-            text_dir = distraction_param['text_dir']
+            rolling_dir = distraction_param['rolling_dir']
             x, y = distraction_param['loc']
-            x, y = get_updated_loc(text_dir, x, y, image_width, image_height)
+            x, y = get_updated_loc(rolling_dir, x, y, image_width, image_height)
             distraction_param['loc'] = (x, y)
 
     if distraction == 'static_shape':
@@ -213,6 +217,8 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
                 distraction_param['color'] = random.choice(get_supported_colors())
             if distraction_param['size'] == random_setting:
                 distraction_param['size'] = random.choice(get_supported_shape_sizes())
+            if distraction_param['rolling_dir'] == random_setting:
+                distraction_param['rolling_dir'] = random.choice(get_supported_rolling_dir())
         else:
             rolling_dir = distraction_param['rolling_dir']
             x, y = distraction_param['loc']
@@ -220,6 +226,9 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
             distraction_param['loc'] = (x, y)
 
     if distraction == 'spontaneous_text':
+        if frame_num == 0:
+            if distraction_param['rate'] == random_setting:
+                distraction_param['rate'] = get_random_spontaneous_rate()
         if random.random() <= distraction_param['rate']:
             distraction_param['text'] = get_random_alphanumeric_string()
             distraction_param['loc'] = get_random_loc(image_width, image_height)
@@ -230,6 +239,9 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
             distraction_param['text'] = ''
 
     if distraction == 'spontaneous_shape':
+        if frame_num == 0:
+            if distraction_param['rate'] == random_setting:
+                distraction_param['rate'] = get_random_spontaneous_rate()
         if random.random() <= distraction_param['rate']:
             distraction_param['shape'] = random.choice(get_supported_shapes())
             distraction_param['loc'] = get_random_loc(image_width, image_height)
@@ -238,7 +250,7 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
         else:
             distraction_param['shape'] = ''
 
-    # print(distraction_param)
+    #print(distraction_param)
     return distraction_param
 
 
@@ -253,11 +265,94 @@ distraction_mapping = {
 
 
 def get_supported_distraction_methods():
-    return distraction_mapping.keys()
+    return list(distraction_mapping.keys())
+
+
+def get_random_static_text_param():
+    return {
+        'text': random_setting,
+        'loc': random_setting,
+        'color': random_setting,
+        'fontScale': random_setting,
+        'thickness': random_setting
+    }
+
+
+def get_random_rolling_text_param():
+    return {
+        'text': random_setting,
+        'loc': random_setting,
+        'color': random_setting,
+        'fontScale': random_setting,
+        'thickness': random_setting,
+        'rolling_dir': random_setting
+    }
+
+
+def get_random_spontaneous_text_param():
+    return {
+        'text': random_setting,
+        'loc': random_setting,
+        'color': random_setting,
+        'fontScale': random_setting,
+        'thickness': random_setting,
+        'rate': random_setting
+    }
+
+
+def get_random_static_shape_param():
+    return {
+        'shape': random_setting,
+        'loc': random_setting,
+        'color': random_setting,
+        'size': random_setting
+    }
+
+
+def get_random_rolling_shape_param():
+    return {
+        'shape': random_setting,
+        'loc': random_setting,
+        'color': random_setting,
+        'size': random_setting,
+        'rolling_dir': random_setting
+    }
+
+
+def get_random_spontaneous_shape_param():
+    return {
+        'shape': random_setting,
+        'loc': random_setting,
+        'color': random_setting,
+        'size': random_setting,
+        'rate': random_setting
+    }
+
+
+def get_distractor_setting_by_type(type=None):
+    if type == 'static_text':
+        return get_random_static_text_param()
+    if type == 'rolling_text':
+        return get_random_rolling_text_param()
+    if type == 'spontaneous_text':
+        return get_random_spontaneous_text_param()
+    if type == 'static_shape':
+        return get_random_static_shape_param()
+    if type == 'rolling_shape':
+        return get_random_rolling_shape_param()
+    if type == 'spontaneous_shape':
+        return get_random_spontaneous_shape_param()
+
+    raise Exception("Unknown type of distractor given")
+
+
+def get_random_distractor():
+    distractor_type = random.choice(get_supported_distraction_methods())
+    return distractor_type, get_distractor_setting_by_type(distractor_type)
 
 
 def apply_distraction_to_videofile(input_video_filename, output_video_filename, distraction=None,
-                                   distraction_param=None, save_intermdt_files=False):
+                                   distraction_param=None, save_intermdt_files=True):
     # t = time.time()
 
     if distraction in get_supported_distraction_methods():
