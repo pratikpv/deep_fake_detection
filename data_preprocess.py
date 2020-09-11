@@ -7,9 +7,10 @@ import os
 import cv2
 from utils import *
 import glob
+from data_utils.utils import *
 
 
-def data_augmentation():
+def test_data_augmentation():
     inp = '/home/therock/dfdc/train/dfdc_train_part_19/jexvqmufit.mp4'
     outp_root = '/home/therock/dfdc/test_augmentation/'
     os.makedirs(outp_root, exist_ok=True)
@@ -23,7 +24,11 @@ def data_augmentation():
         # ('salt', None),
         # ('poisson', None),
         # ('localvar', None)
-        ('contrast', None)
+        # ('contrast', {'contrast_value': -20})
+        # ('brightness', {'brightness_value': 20})
+        # ('rotation', {'angle': random_setting})
+        # ('flip_horizontal', None)
+        ('rescale', {'res': random_setting})
     ]
 
     out_id = os.path.splitext(os.path.basename(inp))[0]
@@ -62,7 +67,7 @@ def locate_faces():
             results.append(job.get())
 
 
-def data_distraction():
+def test_data_distraction():
     inp = '/home/therock/dfdc/train/dfdc_train_part_19/jexvqmufit.mp4'
     outp_root = '/home/therock/dfdc/test_distraction/'
     os.makedirs(outp_root, exist_ok=True)
@@ -155,9 +160,9 @@ def data_distraction():
             distract_func, distract_param = distract
             outfile = os.path.join(outp_root, out_id + '_' + distract_func + '.mp4')
             jobs.append(pool.apply_async(distractions.apply_distraction_to_videofile,
-                                     (inp, outfile,),
-                                     dict(distraction=distract_func, distraction_param=distract_param)
-                                     ))
+                                         (inp, outfile,),
+                                         dict(distraction=distract_func, distraction_param=distract_param)
+                                         ))
 
         for job in tqdm(jobs, desc="Applying augmentation"):
             results.append(job.get())
@@ -166,7 +171,7 @@ def data_distraction():
 def main():
     # data_augmentation()
     # locate_faces()
-    data_distraction()
+     data_distraction()
 
 
 if __name__ == '__main__':

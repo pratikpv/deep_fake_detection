@@ -30,6 +30,14 @@ def get_supported_shape_sizes():
     return ['xsmall', 'small', 'medium', 'large']
 
 
+size_per = {
+    'xsmall': 0.005,
+    'small': 0.05,
+    'medium': 0.08,
+    'large': 0.12,
+}
+
+
 def get_random_alphanumeric_string(length=8):
     letters_and_digits = string.ascii_letters + string.digits
     result_str = ''.join((random.choice(letters_and_digits) for i in range(length)))
@@ -38,6 +46,9 @@ def get_random_alphanumeric_string(length=8):
 
 def apply_static_text_to_image(image, distraction_param=None):
     text = distraction_param['text']
+    if distraction_param['text'] == '':
+        return image
+
     loc = distraction_param['loc']
     color = distraction_param['color']
     thickness = distraction_param['thickness']
@@ -49,6 +60,8 @@ def apply_static_text_to_image(image, distraction_param=None):
 
 
 def apply_rolling_text_to_image(image, distraction_param):
+    if distraction_param['text'] == '':
+        return image
     return apply_static_text_to_image(image, distraction_param)
 
 
@@ -58,16 +71,11 @@ def apply_spontaneous_text(image, distraction_param):
     return apply_static_text_to_image(image, distraction_param)
 
 
-size_per = {
-    'xsmall': 0.005,
-    'small': 0.05,
-    'medium': 0.08,
-    'large': 0.12,
-}
-
-
 def apply_static_shape_to_image(image, distraction_param):
     shape = distraction_param['shape']
+    if distraction_param['shape'] == '':
+        return image
+
     loc = distraction_param['loc']
     color = distraction_param['color']
     size = distraction_param['size']
@@ -86,6 +94,9 @@ def apply_static_shape_to_image(image, distraction_param):
 
 
 def apply_rolling_shape_to_image(image, distraction_param):
+    if distraction_param['shape'] == '':
+        return image
+
     return apply_static_shape_to_image(image, distraction_param)
 
 
@@ -93,16 +104,6 @@ def apply_spontaneous_shape(image, distraction_param):
     if distraction_param['shape'] == '':
         return image
     return apply_static_shape_to_image(image, distraction_param)
-
-
-distraction_mapping = {
-    'static_text': apply_static_text_to_image,
-    'rolling_text': apply_rolling_text_to_image,
-    'spontaneous_text': apply_spontaneous_text,
-    'static_shape': apply_static_shape_to_image,
-    'rolling_shape': apply_rolling_shape_to_image,
-    'spontaneous_shape': apply_spontaneous_shape,
-}
 
 
 def get_random_loc(image_width, image_height):
@@ -146,11 +147,13 @@ def get_updated_loc(rolling_dir, x, y, image_width, image_height, pixel_delta=10
 
 
 def prepare_distraction_param(distraction, distraction_param, frame_num, res):
-    image_width, image_height = res
     # print(distraction)
     # print(distraction_param)
-    if distraction == 'static_text':
 
+    image_width = distraction_param['image_width']
+    image_height = distraction_param['image_height']
+
+    if distraction == 'static_text':
         # Set random values at first frame
         if frame_num == 0:
             if distraction_param['text'] == random_setting:
@@ -181,12 +184,13 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
                 if distraction_param['rolling_dir'] not in get_supported_rolling_dir():
                     raise Exception("Unsupported text_dir given for rolling text distractor")
         else:
+            # get new loc for each frames
             text_dir = distraction_param['text_dir']
             x, y = distraction_param['loc']
             x, y = get_updated_loc(text_dir, x, y, image_width, image_height)
             distraction_param['loc'] = (x, y)
-    if distraction == 'static_shape':
 
+    if distraction == 'static_shape':
         # Set random values at first frame
         if frame_num == 0:
             if distraction_param['shape'] == random_setting:
@@ -199,7 +203,6 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
                 distraction_param['size'] = random.choice(get_supported_shape_sizes())
 
     if distraction == 'rolling_shape':
-
         # Set random values at first frame
         if frame_num == 0:
             if distraction_param['shape'] == random_setting:
@@ -234,31 +237,45 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
             distraction_param['size'] = random.choice(get_supported_shape_sizes())
         else:
             distraction_param['shape'] = ''
+
     # print(distraction_param)
     return distraction_param
 
 
+distraction_mapping = {
+    'static_text': apply_static_text_to_image,
+    'rolling_text': apply_rolling_text_to_image,
+    'spontaneous_text': apply_spontaneous_text,
+    'static_shape': apply_static_shape_to_image,
+    'rolling_shape': apply_rolling_shape_to_image,
+    'spontaneous_shape': apply_spontaneous_shape,
+}
+
+
+def get_supported_distraction_methods():
+    return distraction_mapping.keys()
+
+
 def apply_distraction_to_videofile(input_video_filename, output_video_filename, distraction=None,
-                                   distraction_param=None, res=None, save_intermdt_files=False):
-    t = time.time()
+                                   distraction_param=None, save_intermdt_files=False):
+    # t = time.time()
+
+    if distraction in get_supported_distraction_methods():
+        distraction_func = distraction_mapping[distraction]
+    else:
+        raise Exception("Unknown distraction supplied")
+
     capture = cv2.VideoCapture(input_video_filename)
     frames_num = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     org_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
     org_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-    org_res = (org_width, org_height)
+    res = (org_width, org_height)
     org_fps = int(capture.get(cv2.CAP_PROP_FPS))
 
-    out_res = org_res
-    if res is not None:
-        out_res = res
-
-    distraction_param['image_width'] = out_res[0]
-    distraction_param['image_height'] = out_res[1]
-
-    if distraction in distraction_mapping.keys():
-        distraction_func = distraction_mapping[distraction]
-    else:
-        raise Exception("Unknown distraction supplied")
+    if distraction_param is None:
+        distraction_param = dict()
+    distraction_param['image_width'] = res[0]
+    distraction_param['image_height'] = res[1]
 
     out_images_path = os.path.join(os.path.dirname(output_video_filename),
                                    os.path.splitext(os.path.basename(output_video_filename))[0],
@@ -267,25 +284,23 @@ def apply_distraction_to_videofile(input_video_filename, output_video_filename, 
         os.makedirs(out_images_path, exist_ok=True)
 
     frames = list()
-
     for i in range(frames_num):
         capture.grab()
         success, frame = capture.retrieve()
         if not success:
             continue
-        if res is not None:
-            frame = cv2.resize(frame, res, interpolation=cv2.INTER_AREA)
 
-        distraction_param = prepare_distraction_param(distraction, distraction_param, i, org_res)
-
+        distraction_param = prepare_distraction_param(distraction, distraction_param, i, res)
         frame = distraction_func(image=frame, distraction_param=distraction_param)
+
         if save_intermdt_files:
             out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
-            print(f'saving {out_image_name}')
+            # print(f'saving {out_image_name}')
             cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
         frames.append(frame)
 
-    create_video_from_images(frames, output_video_filename, fps=org_fps, res=out_res)
-    print('Done in', (time.time() - t))
+    create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
+    # print('Done in', (time.time() - t))
+    # print(output_video_filename)
     return
