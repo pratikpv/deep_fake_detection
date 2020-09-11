@@ -1,3 +1,7 @@
+import torch
+import sys
+from utils import *
+import cv2
 import yaml
 from datetime import datetime
 import os
@@ -29,3 +33,18 @@ def print_line(print_len=None):
     if print_len is None:
         config = load_config()
     print('-' * config['printing']['line_len'])
+
+
+def print_banner():
+    print_line()
+
+    log_dir = get_log_dir_name()
+    print(f'LOG_DIR = {log_dir}')
+    print(f'PyTorch version = {torch.__version__}')
+    if torch.cuda.is_available():
+        print(f'PyTorch GPU = {torch.cuda.get_device_name(torch.cuda.current_device())}')
+    else:
+        print('PyTorch No cuda-based GPU detected.')
+    print(f'OpenCV version  = {cv2.__version__}')
+
+    print_line()
