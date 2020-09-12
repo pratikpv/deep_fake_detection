@@ -17,6 +17,19 @@ def get_log_dir_name(create_logdir=True):
     return log_dir
 
 
+def get_data_aug_plan_pkl_filename():
+    config = load_config()
+    return os.path.join(config['assets'], config['data_augmentation']['plan_pkl_file'])
+
+
+def get_data_aug_plan_txt_filename():
+    config = load_config()
+    return os.path.join(config['assets'], config['data_augmentation']['plan_txt_file'])
+
+def get_aug_metadata_folder():
+    config = load_config()
+    return os.path.join(config['assets'], config['data_augmentation']['metadata_folder'])
+
 def load_config(config_file='config.yml'):
     with open(config_file, 'r') as c_file:
         config = yaml.safe_load(c_file)

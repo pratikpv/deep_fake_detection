@@ -2,3 +2,8 @@ logging:
   root_log_dir: logs
 printing:
   line_len: 80
+assets: 'assets'
+data_augmentation:
+  plan_pkl_file: 'data_augmentation_plan.pkl'
+  plan_txt_file: 'data_augmentation_plan.txt'
+  metadata_folder: 'aug_metadata'

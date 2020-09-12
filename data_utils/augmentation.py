@@ -140,8 +140,10 @@ def get_random_noise_type():
 def get_random_noise_setting():
     return {'noise_type': random_setting}
 
+
 def get_noise_param_setting(type):
     return {'noise_type': type}
+
 
 def get_random_blur_setting():
     return {'ksize': random_setting}
@@ -185,8 +187,11 @@ def get_augmentation_setting_by_type(type=None):
     raise Exception("Unknown type of augmentation given")
 
 
-def get_random_augmentation():
-    augmentation_type = random.choice(get_supported_augmentation_methods())
+def get_random_augmentation(avoid_noise=False):
+    supported_augmentation_methods = get_supported_augmentation_methods()
+    if avoid_noise:
+        supported_augmentation_methods.remove('noise')
+    augmentation_type = random.choice(supported_augmentation_methods)
     return augmentation_type, get_augmentation_setting_by_type(augmentation_type)
 
 
@@ -225,7 +230,7 @@ def prepare_augmentation_param(augmentation, augmentation_param, frame_num, res)
 
 
 def apply_augmentation_to_videofile(input_video_filename, output_video_filename, augmentation=None,
-                                    augmentation_param=None, save_intermdt_files=True):
+                                    augmentation_param=None, save_intermdt_files=False):
     # t = time.time()
     list_of_aug = get_supported_augmentation_methods()
     list_of_aug.extend(get_supported_noise_types())
@@ -265,7 +270,7 @@ def apply_augmentation_to_videofile(input_video_filename, output_video_filename,
 
         if save_intermdt_files:
             out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
-            #print(f'saving {out_image_name}')
+            # print(f'saving {out_image_name}')
             cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
         frames.append(frame)
@@ -273,4 +278,8 @@ def apply_augmentation_to_videofile(input_video_filename, output_video_filename,
     create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
     # print('Done in', (time.time() - t))
     # print(output_video_filename)
-    return
+    augmentation_param['input_file'] = input_video_filename
+    augmentation_param['out_file'] = output_video_filename
+    augmentation_param['augmentation'] = augmentation
+    return augmentation_param
+

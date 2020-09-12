@@ -352,7 +352,7 @@ def get_random_distractor():
 
 
 def apply_distraction_to_videofile(input_video_filename, output_video_filename, distraction=None,
-                                   distraction_param=None, save_intermdt_files=True):
+                                   distraction_param=None, save_intermdt_files=False):
     # t = time.time()
 
     if distraction in get_supported_distraction_methods():
@@ -398,4 +398,7 @@ def apply_distraction_to_videofile(input_video_filename, output_video_filename, 
     create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
     # print('Done in', (time.time() - t))
     # print(output_video_filename)
-    return
+    distraction_param['input_file'] = input_video_filename
+    distraction_param['out_file'] = output_video_filename
+    distraction_param['distraction'] = distraction
+    return distraction_param

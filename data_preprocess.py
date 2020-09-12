@@ -159,14 +159,186 @@ def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
     print(f'generated {result_grid_filename}')
 
 
+def generate_data_augmentation_plan(root_dir=None, plan_pkl_file=None, plan_txt_file=None):
+    # Apply various kinds of data augmentation to 30 % of whole training set.
+    # Sample without replacement in this case and each below case.
+    # Form these randomly selected video files,
+    #
+    # apply distractions to 35% of files
+    # distractions and random noise to 35%
+    # distractions, random noise, and augmentation to 15%
+    # noise to 5%
+    # augmentation and noise to 5%
+    # augmentation to 5%
+    #
+
+    results = get_all_video_filepaths(root_dir=root_dir)
+    polulation_size = len(results)
+    random.shuffle(results)
+
+    samples_size = int(polulation_size * 0.30)
+    distr_samples_size = int(samples_size * 0.35)
+    dist_noise_sample_size = int(samples_size * 0.35)
+    dist_noise_aug_size = int(samples_size * 0.15)
+    noise_sample_size = int(samples_size * 0.05)
+    aug_noise_sample_size = int(samples_size * 0.05)
+    aug_sample_size = int(samples_size * 0.05)
+
+    print(f'Total data count {polulation_size}')
+    print(f'Total samples count {samples_size}')
+
+    samples = random.sample(results, samples_size)
+
+    distr_samples = random.sample(samples, distr_samples_size)
+    samples = list(filter(lambda i: i not in distr_samples, samples))
+
+    dist_noise_samples = random.sample(samples, dist_noise_sample_size)
+    samples = list(filter(lambda i: i not in dist_noise_samples, samples))
+
+    dist_noise_aug_samples = random.sample(samples, dist_noise_aug_size)
+    samples = list(filter(lambda i: i not in dist_noise_aug_samples, samples))
+
+    noise_samples = random.sample(samples, noise_sample_size)
+    samples = list(filter(lambda i: i not in noise_samples, samples))
+
+    aug_noise_samples = random.sample(samples, aug_noise_sample_size)
+    samples = list(filter(lambda i: i not in aug_noise_samples, samples))
+
+    aug_samples = random.sample(samples, aug_sample_size)
+
+    assert len(distr_samples) == distr_samples_size
+    assert len(dist_noise_samples) == dist_noise_sample_size
+    assert len(dist_noise_aug_samples) == dist_noise_aug_size
+    assert len(noise_samples) == noise_sample_size
+    assert len(aug_noise_samples) == aug_noise_sample_size
+    assert len(aug_samples) == aug_sample_size
+
+    distr_samples_exec_plan = []
+    for i in distr_samples:
+        plan = list()
+        plan.append({'distraction': distractions.get_random_distractor()})
+        entry = i, plan
+        distr_samples_exec_plan.append(entry)
+    # pprint(distr_samples_exec_plan)
+
+    dist_noise_samples_exec_plan = []
+    for i in dist_noise_samples:
+        plan = list()
+        plan.append({'distraction': distractions.get_random_distractor()})
+        noise_type = augmentation.get_random_noise_type()
+        noise_param = augmentation.get_noise_param_setting(noise_type)
+        plan.append({'augmentation': ('noise', noise_param)})
+        entry = i, plan
+        dist_noise_samples_exec_plan.append(entry)
+    # pprint(dist_noise_samples_exec_plan)
+
+    dist_noise_aug_exec_plan = []
+    for i in dist_noise_aug_samples:
+        plan = list()
+        plan.append({'distraction': distractions.get_random_distractor()})
+        noise_type = augmentation.get_random_noise_type()
+        noise_param = augmentation.get_noise_param_setting(noise_type)
+        plan.append({'augmentation': ('noise', noise_param)})
+        plan.append({'augmentation': augmentation.get_random_augmentation(avoid_noise=True)})
+        entry = i, plan
+        dist_noise_aug_exec_plan.append(entry)
+    # pprint(dist_noise_aug_exec_plan)
+
+    noise_samples_exe_plan = []
+    for i in noise_samples:
+        plan = list()
+        noise_type = augmentation.get_random_noise_type()
+        noise_param = augmentation.get_noise_param_setting(noise_type)
+        plan.append({'augmentation': ('noise', noise_param)})
+        entry = i, plan
+        noise_samples_exe_plan.append(entry)
+    # pprint(noise_samples_exe_plan)
+
+    aug_noise_samples_exec_plan = []
+    for i in aug_noise_samples:
+        plan = list()
+        plan.append({'augmentation': augmentation.get_random_augmentation(avoid_noise=True)})
+        noise_type = augmentation.get_random_noise_type()
+        noise_param = augmentation.get_noise_param_setting(noise_type)
+        plan.append({'augmentation': ('noise', noise_param)})
+        entry = i, plan
+        aug_noise_samples_exec_plan.append(entry)
+    # pprint(aug_noise_samples_exec_plan)
+
+    aug_samples_exec_plan = []
+    for i in aug_samples:
+        plan = list()
+        plan.append({'augmentation': augmentation.get_random_augmentation(avoid_noise=True)})
+        entry = i, plan
+        aug_samples_exec_plan.append(entry)
+    # pprint(aug_samples_exec_plan)
+
+    data_augmentation_plan = list()
+    data_augmentation_plan.extend(distr_samples_exec_plan)
+    data_augmentation_plan.extend(dist_noise_samples_exec_plan)
+    data_augmentation_plan.extend(dist_noise_aug_exec_plan)
+    data_augmentation_plan.extend(noise_samples_exe_plan)
+    data_augmentation_plan.extend(aug_noise_samples_exec_plan)
+    data_augmentation_plan.extend(aug_samples_exec_plan)
+
+    print(f'Saving plan to {plan_pkl_file}')
+    with open(plan_pkl_file, 'wb') as f:
+        pickle.dump(data_augmentation_plan, f)
+
+    print(f'Saving plan to {plan_txt_file}')
+    with open(plan_txt_file, 'w') as f:
+        for listitem in data_augmentation_plan:
+            f.write('%s\n' % str(listitem))
+
+    return data_augmentation_plan
+
+
+
+
+def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_folder):
+    with open(data_augmentation_plan_filename, 'rb') as f:
+        data_augmentation_plan = pickle.load(f)
+
+    # i wish to apply plan in sequence for each file, but if the file has multiple plans
+    # later plans may get started before eariler one finishes.
+    # to workaround this, execute plan[0] for each file, then plan[1] for each file
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        results = []
+        for plan_id in range(5):
+            for filename, plan in data_augmentation_plan:
+                if len(plan) > plan_id:
+                    p = plan[plan_id]
+
+                    if 'augmentation' in p.keys():
+                        distr = p['augmentation']
+                        jobs.append(pool.apply_async(augmentation.apply_augmentation_to_videofile,
+                                                     (filename, filename,),
+                                                     dict(augmentation=distr[0], augmentation_param=distr[1])
+                                                     )
+                                    )
+                    elif 'distraction' in p.keys():
+                        distr = p['distraction']
+                        jobs.append(pool.apply_async(distractions.apply_distraction_to_videofile,
+                                                     (filename, filename,),
+                                                     dict(distraction=distr[0], distraction_param=distr[1])
+                                                     ))
+
+        for job in tqdm(jobs, desc="Executing data augmentation plan"):
+            r = job.get()
+            df = pd.DataFrame.from_dict(r, orient='index')
+            rfilename = os.path.basename(r['input_file']) + \
+                        '_' + str(datetime.now().strftime("%d-%b-%Y_%H_%M_%S")) + '.csv'
+            df.to_csv(os.path.join(metadata_folder, rfilename))
+            results.append(r)
+
+    return results
 
 
 def main():
-    input_file = '/home/therock/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
     data_root_dir = '/home/therock/dfdc/train/'
-    aug_output_folder = '/home/therock/dfdc/test_augmentation_2/'
-    output_track_folder = os.path.join(aug_output_folder, 'tracked')
-    generate_poster(input_file, aug_output_folder)
+    generate_data_augmentation_plan(data_root_dir, get_data_aug_plan_pkl_filename(), get_data_aug_plan_txt_filename())
+    execute_data_augmentation_plan(get_data_aug_plan_pkl_filename(), get_aug_metadata_folder())
 
 
 if __name__ == '__main__':
