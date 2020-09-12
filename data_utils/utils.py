@@ -102,3 +102,15 @@ def get_originals_and_fakes(root_dir):
                 originals.append(k[:-4])
 
     return originals, fakes
+
+
+def get_all_video_filepaths(root_dir):
+    video_filepaths = []
+    for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
+        dir = Path(json_path).parent
+        with open(json_path, "r") as f:
+            metadata = json.load(f)
+        for k, v in metadata.items():
+            full_path = os.path.join(dir, k)
+            video_filepaths.append(full_path)
+    return video_filepaths
