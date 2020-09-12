@@ -8,9 +8,20 @@ import cv2
 from utils import *
 from glob import glob
 from data_utils.utils import *
+import matplotlib.pyplot as plt
+import pandas as pd
+import random
+import pickle
 
 
 def test_data_augmentation(input_file, output_folder):
+    """
+    Test all kinds of data augmentation. Applies supported augmentation to input_file
+    and save individual output videos in output_folder
+    :param input_file:
+    :param output_folder:
+    :return:
+    """
     os.makedirs(output_folder, exist_ok=True)
 
     augmentation_methods = augmentation.get_supported_augmentation_methods()
@@ -62,6 +73,13 @@ def locate_faces(input_root, output_root):
 
 
 def test_data_distraction(input_file, output_folder):
+    """
+    Test all kinds of data distraction. Applies supported distraction to input_file
+    and save individual output videos in output_folder
+    :param input_file:
+    :param output_folder:
+    :return:
+    """
     os.makedirs(output_folder, exist_ok=True)
 
     distraction_methods = distractions.get_supported_distraction_methods()
@@ -84,14 +102,71 @@ def test_data_distraction(input_file, output_folder):
         for job in tqdm(jobs, desc="Applying distraction"):
             results.append(job.get())
 
+    return results
+
+
+def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
+    id = os.path.splitext(os.path.basename(org_file))[0]
+    org_out_images = os.path.join(aug_output_folder, id + '_original')
+    # extract_images_from_video(org_file, org_out_images)
+    sub_fol = []
+    for f in glob(aug_output_folder + '/*'):
+        if os.path.isdir(f):
+            sub_fol.append(f)
+    sub_fol_count = len(sub_fol)
+    print(f'sub_fol_count {sub_fol_count}')
+    result_grid_filename = os.path.join(aug_output_folder, 'poster.jpg')
+    result_figsize_resolution = 40  # 1 = 100px
+
+    total_frames = 300
+    step = int(total_frames / frames_count)
+    images_list = ['{}.jpg'.format(i) for i in range(0, total_frames, step)]
+    images_count = len(images_list)
+    print('Images: ', images_list)
+    print('Images count: ', images_count)
+
+    out_res_per_image = 1920, 1080
+    result_figsize_resolution = out_res_per_image[0] * images_count, out_res_per_image[1] * images_count
+    print(f'result_figsize_resolution = {result_figsize_resolution}')
+    fig, axes = plt.subplots(sub_fol_count, frames_count,
+                             figsize=(40, 40)
+                             )
+
+    fol_n_replace_str = id + '_'
+    for i, folder in enumerate(sub_fol):
+        fol_n = folder.replace(fol_n_replace_str, '')
+        axes[i, 0].set_ylabel(fol_n)
+        for j, frame in enumerate(images_list):
+            plt_image = plt.imread(folder + '/' + frame)
+            axes[i, j].imshow(plt_image)
+            axes[i, j].axis('off')
+            """
+            if j == 0:
+                n = os.path.basename(folder)
+                # axes[i, j].set_title(n, loc='left',y=True)
+                axes[i, j].set_ylabel(n)
+            else:
+                axes[i, j].set_title('')
+            """
+            if i == 0:
+                fnum = frame.replace('.jpg', '')
+                axes[0, j].set_title('frame {}'.format(fnum))
+            axes[i, j].get_xaxis().set_visible(False)
+            axes[i, j].get_yaxis().set_visible(False)
+            # print(folder + '/' + frame)
+    plt.savefig(result_grid_filename)
+
+    print(f'generated {result_grid_filename}')
+
+
+
 
 def main():
     input_file = '/home/therock/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
-    aug_output_folder = '/home/therock/dfdc/test_augmentation/'
+    data_root_dir = '/home/therock/dfdc/train/'
+    aug_output_folder = '/home/therock/dfdc/test_augmentation_2/'
     output_track_folder = os.path.join(aug_output_folder, 'tracked')
-    test_data_augmentation(input_file, aug_output_folder)
-    test_data_distraction(input_file, aug_output_folder)
-    locate_faces(aug_output_folder, output_track_folder)
+    generate_poster(input_file, aug_output_folder)
 
 
 if __name__ == '__main__':
