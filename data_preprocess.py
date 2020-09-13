@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import random
 import pickle
+import traceback
 
 
 def test_data_augmentation(input_file, output_folder):
@@ -293,23 +294,41 @@ def generate_data_augmentation_plan(root_dir=None, plan_pkl_file=None, plan_txt_
     return data_augmentation_plan
 
 
+def plan_already_executed(filename, plan, metadata_folder):
+    id = os.path.basename(filename)
+    file_search = metadata_folder + '/{}*'.format(id)
+    pe_files = glob(file_search)
+    for f in pe_files:
+        df = pd.read_csv(f, index_col=0)
+        types = ['distraction', 'augmentation']
+        for t in types:
+            if t in plan.keys() and t in df.index:
+                if plan[t][0] in df.loc[t].values:
+                    return True
+
+    return False
 
 
 def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_folder):
+    max_num_plans = 4
     with open(data_augmentation_plan_filename, 'rb') as f:
         data_augmentation_plan = pickle.load(f)
 
+    random.shuffle(data_augmentation_plan)
+    data_augmentation_plan = data_augmentation_plan[:1000]
     # i wish to apply plan in sequence for each file, but if the file has multiple plans
     # later plans may get started before eariler one finishes.
     # to workaround this, execute plan[0] for each file, then plan[1] for each file
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         results = []
-        for plan_id in range(5):
-            for filename, plan in data_augmentation_plan:
+        for plan_id in range(max_num_plans):
+            desc = "Queuing Jobs for id {}".format(plan_id)
+            for filename, plan in tqdm(data_augmentation_plan, desc=desc):
                 if len(plan) > plan_id:
                     p = plan[plan_id]
-
+                    if plan_already_executed(filename, p, metadata_folder):
+                        continue
                     if 'augmentation' in p.keys():
                         distr = p['augmentation']
                         jobs.append(pool.apply_async(augmentation.apply_augmentation_to_videofile,
@@ -326,10 +345,18 @@ def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_fol
 
         for job in tqdm(jobs, desc="Executing data augmentation plan"):
             r = job.get()
-            df = pd.DataFrame.from_dict(r, orient='index')
-            rfilename = os.path.basename(r['input_file']) + \
-                        '_' + str(datetime.now().strftime("%d-%b-%Y_%H_%M_%S")) + '.csv'
-            df.to_csv(os.path.join(metadata_folder, rfilename))
+            try:
+                df = pd.Series(r).reset_index().set_index('index')
+                rfilename = os.path.basename(r['input_file']) + \
+                            '_' + str(datetime.now().strftime("%d-%b-%Y_%H_%M_%S")) + '.csv'
+                df.to_csv(os.path.join(metadata_folder, rfilename), header=False)
+            except Exception:
+                print('Got exception')
+                print(r)
+                print(traceback.print_exc())
+                print_line()
+                print(sys.exc_info()[0])
+                print_line()
             results.append(r)
 
     return results
@@ -337,7 +364,7 @@ def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_fol
 
 def main():
     data_root_dir = '/home/therock/dfdc/train/'
-    generate_data_augmentation_plan(data_root_dir, get_data_aug_plan_pkl_filename(), get_data_aug_plan_txt_filename())
+    # generate_data_augmentation_plan(data_root_dir, get_data_aug_plan_pkl_filename(), get_data_aug_plan_txt_filename())
     execute_data_augmentation_plan(get_data_aug_plan_pkl_filename(), get_aug_metadata_folder())
 
 
