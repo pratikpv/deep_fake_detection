@@ -15,7 +15,7 @@ def get_frame_count_from_video(video_file):
 
 
 def create_video_from_images(images, output_video_filename, fps=30, res=(1920, 1080)):
-    video = cv2.VideoWriter(output_video_filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, res)
+    video = cv2.VideoWriter(output_video_filename, cv2.VideoWriter_fourcc('H', '2', '6', '4'), fps, res)
     for image in images:
         video.write(image)
     video.release()
