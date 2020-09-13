@@ -5,13 +5,30 @@ import json
 import os
 from glob import glob
 from pathlib import Path
-
+import random
+from subprocess import Popen, PIPE
+from utils import *
 random_setting = '$RANDOM$'
 
 
 def get_frame_count_from_video(video_file):
     cap = cv2.VideoCapture(video_file)
     return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+
+def compress_video(input_videofile, output_videofile, lvl=None):
+    if lvl is None:
+        lvl = random.choice([27, 28, 29])
+    command = ['ffmpeg', '-i', input_videofile, '-c:v', 'libx264', '-crf', str(lvl),
+               '-threads', '1', '-loglevel', 'quiet', '-y', output_videofile]
+    try:
+        # print(command)
+        process = Popen(command, stdout=PIPE, stderr=PIPE)
+        process.wait()
+        p_out, p_err = process.communicate()
+    except Exception as e:
+        print_line()
+        print("Failed to compress video", str(e))
 
 
 def create_video_from_images(images, output_video_filename, fps=30, res=(1920, 1080)):
