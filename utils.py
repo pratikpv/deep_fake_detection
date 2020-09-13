@@ -26,9 +26,16 @@ def get_data_aug_plan_txt_filename():
     config = load_config()
     return os.path.join(config['assets'], config['data_augmentation']['plan_txt_file'])
 
+
 def get_aug_metadata_folder():
     config = load_config()
     return os.path.join(config['assets'], config['data_augmentation']['metadata_folder'])
+
+
+def get_assets_folder():
+    config = load_config()
+    return config['assets']
+
 
 def load_config(config_file='config.yml'):
     with open(config_file, 'r') as c_file:
@@ -61,3 +68,8 @@ def print_banner():
     print(f'OpenCV version  = {cv2.__version__}')
 
     print_line()
+
+
+def create_assets_placeholder():
+    os.makedirs(get_assets_folder(), exist_ok=True)
+    os.makedirs(get_aug_metadata_folder(), exist_ok=True)
