@@ -9,7 +9,8 @@ import random
 from subprocess import Popen, PIPE
 from utils import *
 import shutil
-
+from tqdm import tqdm
+import pandas as pd
 random_setting = '$RANDOM$'
 
 
@@ -191,3 +192,18 @@ def get_all_video_filepaths(root_dir):
             full_path = os.path.join(dir, k)
             video_filepaths.append(full_path)
     return video_filepaths
+
+
+def restore_augmented_files(aug_metadata, src_root, dest_root):
+    vdo_files = glob(aug_metadata + '/*')
+    vdo_set = set()
+    for f in tqdm(vdo_files, desc='Restoring augmented files'):
+        df = pd.read_csv(f, index_col=0)
+        input_file = df.loc['input_file'].values[0]
+        input_file = '/'.join(input_file.split('/')[-2:])
+        if input_file in vdo_set:
+            continue
+        vdo_set.add(input_file)
+        src_path = os.path.join(src_root, input_file)
+        dest_path = os.path.join(dest_root, input_file)
+        shutil.copyfile(src_path, dest_path)
