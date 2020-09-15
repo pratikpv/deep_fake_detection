@@ -8,6 +8,8 @@ from pathlib import Path
 import random
 from subprocess import Popen, PIPE
 from utils import *
+import shutil
+
 random_setting = '$RANDOM$'
 
 
@@ -29,6 +31,48 @@ def compress_video(input_videofile, output_videofile, lvl=None):
     except Exception as e:
         print_line()
         print("Failed to compress video", str(e))
+
+
+def in_range(val, min_v, max_v):
+    if min_v <= val <= max_v:
+        return True
+    return False
+
+
+def adaptive_video_compress(input_videofile, min_file_size, max_file_size, max_tries=4):
+    output_videofile = os.path.join(os.path.dirname(input_videofile),
+                                    os.path.splitext(os.path.basename(input_videofile))[0] + '_tmp.mp4',
+                                    )
+    file_size_org = os.path.getsize(input_videofile)
+    result = {'input_file': input_videofile,
+              'cmprsn_lvl': -1,
+              'file_size_org': file_size_org,
+              'file_size_comprsd': -1}
+    if file_size_org <= max_file_size:
+        return result
+
+    cmprsn_lvl = 30
+    already_tried_lvls = list()
+    for i in range(max_tries):
+        if cmprsn_lvl in already_tried_lvls:
+            break
+        compress_video(input_videofile, output_videofile, lvl=cmprsn_lvl)
+        already_tried_lvls.append(cmprsn_lvl)
+        f_size = os.path.getsize(output_videofile)
+        if f_size > max_file_size:
+            # increase compression
+            cmprsn_lvl += 1
+        elif f_size < min_file_size:
+            # decrease compression
+            cmprsn_lvl -= 1
+        else:
+            break
+
+    shutil.move(output_videofile, input_videofile)
+    file_size_comprsd = os.path.getsize(input_videofile)
+    result['cmprsn_lvl'] = cmprsn_lvl
+    result['file_size_comprsd'] = file_size_comprsd
+    return result
 
 
 def create_video_from_images(images, output_video_filename, fps=30, res=(1920, 1080)):
