@@ -11,6 +11,7 @@ from utils import *
 import shutil
 from tqdm import tqdm
 import pandas as pd
+
 random_setting = '$RANDOM$'
 
 
@@ -207,3 +208,39 @@ def restore_augmented_files(aug_metadata, src_root, dest_root):
         src_path = os.path.join(src_root, input_file)
         dest_path = os.path.join(dest_root, input_file)
         shutil.copyfile(src_path, dest_path)
+
+
+def get_default_train_data_path():
+    config = load_config()
+    return config['data_path']['train']
+
+
+def get_default_test_data_path():
+    config = load_config()
+    return config['data_path']['test']
+
+
+def get_default_validation_data_path():
+    config = load_config()
+    return config['data_path']['valid']
+
+
+def get_compression_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_folder(), config['data_augmentation']['compression_csv'])
+
+
+def get_files_size(train_data_path, in_MB=False):
+    v_paths = get_all_video_filepaths(train_data_path)
+    file_size_map = list()
+    for v in v_paths:
+        try:
+            f_size = os.path.getsize(v)
+            if in_MB:
+                f_size = round(f_size / (1024 * 1024), 2)
+            file_size_map.append((v, f_size))
+        except FileNotFoundError as e:
+            # print(f'not found {v}')
+            pass
+
+    return file_size_map
