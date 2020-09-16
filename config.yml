@@ -3,7 +3,12 @@ logging:
 printing:
   line_len: 80
 assets: 'assets'
+data_path:
+  train: '/home/therock/data2/data_workset/dfdc/train/'
+  test: '/home/therock/data2/data_workset/dfdc/test/'
+  validation: '/home/therock/data2/data_workset/dfdc/validation/'
 data_augmentation:
   plan_pkl_file: 'data_augmentation_plan.pkl'
   plan_txt_file: 'data_augmentation_plan.txt'
   metadata_folder: 'aug_metadata'
+  compression_csv: 'data_compression.csv'
