@@ -101,23 +101,6 @@ def apply_rescale_to_image(image, augmentation_param):
     return cv2.resize(image, res, interpolation=cv2.INTER_AREA)
 
 
-"""
-augmentation_mapping = {
-    'gaussian': partial(apply_noise_to_image, mode='gaussian'),
-    'speckle': partial(apply_noise_to_image, mode='speckle'),
-    's&p': partial(apply_noise_to_image, mode='s&p'),
-    'pepper': partial(apply_noise_to_image, mode='pepper'),
-    'salt': partial(apply_noise_to_image, mode='salt'),
-    'poisson': partial(apply_noise_to_image, mode='poisson'),
-    'localvar': partial(apply_noise_to_image, mode='localvar'),
-    'blur': apply_blur_to_image,
-    'contrast': apply_contrast_to_image,
-    'brightness': apply_brightness_to_image,
-    'rotation': apply_rotation_to_image,
-    'flip_horizontal': apply_flip_horizontal,
-    'rescale': apply_rescale_to_image,
-}
-"""
 augmentation_mapping = {
     'noise': apply_noise_to_image,
     'blur': apply_blur_to_image,
@@ -230,7 +213,7 @@ def prepare_augmentation_param(augmentation, augmentation_param, frame_num, res)
 
 
 def apply_augmentation_to_videofile(input_video_filename, output_video_filename, augmentation=None,
-                                    augmentation_param=None, save_intermdt_files=False):
+                                    augmentation_param=None, save_intermdt_files=False, test_mode=False):
     # t = time.time()
     list_of_aug = get_supported_augmentation_methods()
     list_of_aug.extend(get_supported_noise_types())
@@ -258,28 +241,28 @@ def apply_augmentation_to_videofile(input_video_filename, output_video_filename,
         os.makedirs(out_images_path, exist_ok=True)
 
     frames = list()
-    for i in range(frames_num):
-        capture.grab()
-        success, frame = capture.retrieve()
-        if not success:
-            continue
-        augmentation_param = prepare_augmentation_param(augmentation, augmentation_param, i, res)
-        if augmentation == 'rescale':
-            res = augmentation_param['res']
-        frame = augmentation_func(image=frame, augmentation_param=augmentation_param)
+    if not test_mode:
+        for i in range(frames_num):
+            capture.grab()
+            success, frame = capture.retrieve()
+            if not success:
+                continue
+            augmentation_param = prepare_augmentation_param(augmentation, augmentation_param, i, res)
+            if augmentation == 'rescale':
+                res = augmentation_param['res']
+            frame = augmentation_func(image=frame, augmentation_param=augmentation_param)
 
-        if save_intermdt_files:
-            out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
-            # print(f'saving {out_image_name}')
-            cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+            if save_intermdt_files:
+                out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
+                # print(f'saving {out_image_name}')
+                cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
-        frames.append(frame)
+            frames.append(frame)
 
-    create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
+        create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
     # print('Done in', (time.time() - t))
     # print(output_video_filename)
     augmentation_param['input_file'] = input_video_filename
     augmentation_param['out_file'] = output_video_filename
     augmentation_param['augmentation'] = augmentation
     return augmentation_param
-

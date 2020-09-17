@@ -250,7 +250,7 @@ def prepare_distraction_param(distraction, distraction_param, frame_num, res):
         else:
             distraction_param['shape'] = ''
 
-    #print(distraction_param)
+    # print(distraction_param)
     return distraction_param
 
 
@@ -352,7 +352,7 @@ def get_random_distractor():
 
 
 def apply_distraction_to_videofile(input_video_filename, output_video_filename, distraction=None,
-                                   distraction_param=None, save_intermdt_files=False):
+                                   distraction_param=None, save_intermdt_files=False, test_mode=False):
     # t = time.time()
 
     if distraction in get_supported_distraction_methods():
@@ -379,23 +379,24 @@ def apply_distraction_to_videofile(input_video_filename, output_video_filename, 
         os.makedirs(out_images_path, exist_ok=True)
 
     frames = list()
-    for i in range(frames_num):
-        capture.grab()
-        success, frame = capture.retrieve()
-        if not success:
-            continue
+    if not test_mode:
+        for i in range(frames_num):
+            capture.grab()
+            success, frame = capture.retrieve()
+            if not success:
+                continue
 
-        distraction_param = prepare_distraction_param(distraction, distraction_param, i, res)
-        frame = distraction_func(image=frame, distraction_param=distraction_param)
+            distraction_param = prepare_distraction_param(distraction, distraction_param, i, res)
+            frame = distraction_func(image=frame, distraction_param=distraction_param)
 
-        if save_intermdt_files:
-            out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
-            # print(f'saving {out_image_name}')
-            cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+            if save_intermdt_files:
+                out_image_name = os.path.join(out_images_path, "{}.jpg".format(i))
+                # print(f'saving {out_image_name}')
+                cv2.imwrite(out_image_name, frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
-        frames.append(frame)
+            frames.append(frame)
 
-    create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
+        create_video_from_images(frames, output_video_filename, fps=org_fps, res=res)
     # print('Done in', (time.time() - t))
     # print(output_video_filename)
     distraction_param['input_file'] = input_video_filename
