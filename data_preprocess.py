@@ -1,13 +1,14 @@
 import multiprocessing
 from functools import partial
 from tqdm import tqdm
+from data_utils.utils import *
 import data_utils.augmentation as augmentation
 import data_utils.distractions as distractions
+import data_utils.face_detection as fd
 import os
 import cv2
 from utils import *
 from glob import glob
-from data_utils.utils import *
 import matplotlib.pyplot as plt
 import pandas as pd
 import random
@@ -407,6 +408,16 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
         df.to_csv(get_compression_csv_path(), mode='a', header=False)
 
 
+def extract_faces_batch(data_root_dir):
+    faces_loc_path = get_faces_loc_data_path()
+    os.makedirs(faces_loc_path, exist_ok=True)
+    detector = fd.get_face_detector_model()
+
+    inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_22/ibhoivgoml.mp4'
+    #inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
+    fd.extract_faces_from_video(inp, faces_loc_path, batch_size=32, detector=detector)
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -439,6 +450,9 @@ def main():
     if args.compress_videos:
         adaptive_video_compress_batch(args.data_root_dir, get_data_aug_plan_pkl_filename())
 
+    if args.extract_faces:
+        extract_faces_batch(args.data_root_dir)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -461,6 +475,9 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--compress_videos', action='store_true',
                         help='Compress all videos (adaptive compression to maintain approx median filesize)',
+                        default=False)
+    parser.add_argument('--extract_faces', action='store_true',
+                        help='Detect faces from videos and store json for each face locations',
                         default=False)
 
     args = parser.parse_args()

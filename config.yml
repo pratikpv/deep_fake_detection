@@ -13,3 +13,5 @@ data_augmentation:
   plan_txt_file: 'data_augmentation_plan.txt'
   metadata_folder: 'aug_metadata'
   compression_csv: 'data_compression.csv'
+features:
+  face_location_data_path: 'face_location_data'

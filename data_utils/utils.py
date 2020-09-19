@@ -220,3 +220,8 @@ def get_files_size(train_data_path, in_MB=False):
             pass
 
     return file_size_map
+
+
+def get_faces_loc_data_path():
+    config = load_config()
+    return os.path.join(get_assets_folder(), config['features']['face_location_data_path'])
