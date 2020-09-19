@@ -13,6 +13,8 @@ import pandas as pd
 import random
 import pickle
 import traceback
+import argparse
+import numpy as np
 
 
 def test_data_augmentation(input_file, output_folder):
@@ -87,7 +89,6 @@ def test_data_distraction(input_file, output_folder):
     distraction_params = [distractions.get_distractor_setting_by_type(m) for m in distraction_methods]
     distraction_plan = list(zip(distraction_methods, distraction_params))
     out_id = os.path.splitext(os.path.basename(input_file))[0]
-    pprint(distraction_plan)
 
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
@@ -109,7 +110,7 @@ def test_data_distraction(input_file, output_folder):
 def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
     id = os.path.splitext(os.path.basename(org_file))[0]
     org_out_images = os.path.join(aug_output_folder, id + '_original')
-    # extract_images_from_video(org_file, org_out_images)
+    extract_images_from_video(org_file, org_out_images)
     sub_fol = []
     for f in glob(aug_output_folder + '/*'):
         if os.path.isdir(f):
@@ -117,7 +118,6 @@ def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
     sub_fol_count = len(sub_fol)
     print(f'sub_fol_count {sub_fol_count}')
     result_grid_filename = os.path.join(aug_output_folder, 'poster.jpg')
-    result_figsize_resolution = 40  # 1 = 100px
 
     total_frames = 300
     step = int(total_frames / frames_count)
@@ -136,25 +136,15 @@ def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
     fol_n_replace_str = id + '_'
     for i, folder in enumerate(sub_fol):
         fol_n = folder.replace(fol_n_replace_str, '')
-        axes[i, 0].set_ylabel(fol_n)
         for j, frame in enumerate(images_list):
             plt_image = plt.imread(folder + '/' + frame)
             axes[i, j].imshow(plt_image)
             axes[i, j].axis('off')
-            """
-            if j == 0:
-                n = os.path.basename(folder)
-                # axes[i, j].set_title(n, loc='left',y=True)
-                axes[i, j].set_ylabel(n)
-            else:
-                axes[i, j].set_title('')
-            """
             if i == 0:
                 fnum = frame.replace('.jpg', '')
                 axes[0, j].set_title('frame {}'.format(fnum))
             axes[i, j].get_xaxis().set_visible(False)
             axes[i, j].get_yaxis().set_visible(False)
-            # print(folder + '/' + frame)
     plt.savefig(result_grid_filename)
 
     print(f'generated {result_grid_filename}')
@@ -314,8 +304,9 @@ def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_fol
     with open(data_augmentation_plan_filename, 'rb') as f:
         data_augmentation_plan = pickle.load(f)
 
-    random.shuffle(data_augmentation_plan)
-    data_augmentation_plan = data_augmentation_plan[:1000]
+    # random.shuffle(data_augmentation_plan)
+    # data_augmentation_plan = data_augmentation_plan[:100]
+
     # i wish to apply plan in sequence for each file, but if the file has multiple plans
     # later plans may get started before eariler one finishes.
     # to workaround this, execute plan[0] for each file, then plan[1] for each file
@@ -350,9 +341,13 @@ def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_fol
                 rfilename = os.path.basename(r['input_file']) + \
                             '_' + str(datetime.now().strftime("%d-%b-%Y_%H_%M_%S")) + '.csv'
                 df.to_csv(os.path.join(metadata_folder, rfilename), header=False)
-            except Exception:
-                print('Got exception')
                 print(r)
+            except Exception:
+                print_line()
+                print('Got exception')
+                print_line()
+                print(r)
+                print_line()
                 print(traceback.print_exc())
                 print_line()
                 print(sys.exc_info()[0])
@@ -362,11 +357,114 @@ def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_fol
     return results
 
 
+def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename=None):
+    file_size_map = get_files_size(data_root_dir)
+    file_names, file_sizes = list(zip(*file_size_map))
+    median_file_size = np.median(file_sizes)
+    std = np.std(file_sizes)
+    margin = 0.20
+    delta = int(median_file_size * margin)
+    min_file_size, max_file_size = median_file_size - delta, 3 * std
+    num_of_files = len(file_names)
+
+    if data_augmentation_plan_filename is not None:
+        with open(data_augmentation_plan_filename, 'rb') as f:
+            data_augmentation_plan = pickle.load(f)
+        augmented_filenames = list()
+        for filename, plan in tqdm(data_augmentation_plan, desc="Build augmented filename list"):
+            augmented_filenames.append(os.path.basename(filename))
+
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        results = []
+        for idx in tqdm(range(num_of_files), desc="Scheduling compression jobs"):
+            # if data_augmentation_plan_filename is supplied then, compress those files only
+            if data_augmentation_plan_filename is not None:
+                # if current file is not in list of augmented files then dont compress and
+                # move on to next file
+                if not os.path.basename(file_names[idx]) in augmented_filenames:
+                    continue
+            jobs.append(pool.apply_async(adaptive_video_compress,
+                                         (file_names[idx], min_file_size, max_file_size,)
+                                         )
+                        )
+
+        for job in tqdm(jobs, desc="Executing adaptive video compression"):
+            # print(job.get())
+            try:
+                results.append(job.get())
+            except Exception:
+                print_line()
+                print(traceback.print_exc())
+                print_line()
+                print(sys.exc_info()[0])
+                print_line()
+
+    df = pd.DataFrame(results).set_index('input_file')
+    if not os.path.exists(get_compression_csv_path()):
+        df.to_csv(get_compression_csv_path())
+    else:
+        df.to_csv(get_compression_csv_path(), mode='a', header=False)
+
+
 def main():
-    data_root_dir = '/home/therock/dfdc/train/'
-    # generate_data_augmentation_plan(data_root_dir, get_data_aug_plan_pkl_filename(), get_data_aug_plan_txt_filename())
-    execute_data_augmentation_plan(get_data_aug_plan_pkl_filename(), get_aug_metadata_folder())
+    if args.apply_aug_to_sample:
+        print('Applying augmentation and distraction to sample file')
+        sample_test_file = os.path.join('dfdc_train_part_30', 'ajxcpxpmof.mp4')
+        sample_test_file = os.path.join(args.data_root_dir, sample_test_file)
+        print(f'sample file: {sample_test_file}')
+
+        aug_output_folder = os.path.join(args.data_root_dir, 'test_augmentation')
+        face_locate_out_folder = os.path.join(args.data_root_dir, 'test_augmentation_locate')
+
+        test_data_augmentation(sample_test_file, aug_output_folder)
+        test_data_distraction(sample_test_file, aug_output_folder)
+        locate_faces(aug_output_folder, face_locate_out_folder)
+        print(f'generating poster for samples')
+        generate_poster(sample_test_file, aug_output_folder)
+
+    if args.gen_aug_plan:
+        print('Generating augmentation plan')
+        generate_data_augmentation_plan(args.data_root_dir, get_data_aug_plan_pkl_filename(),
+                                        get_data_aug_plan_txt_filename())
+
+    if args.apply_aug_to_all:
+        print('Executing augmentation plan')
+        execute_data_augmentation_plan(get_data_aug_plan_pkl_filename(), get_aug_metadata_folder())
+
+    if args.restore_aug_files:
+        print('Restoring all augmented files from backup')
+        restore_augmented_files(get_aug_metadata_folder(), args.data_backup_dir, args.data_root_dir)
+
+    if args.compress_videos:
+        adaptive_video_compress_batch(args.data_root_dir, get_data_aug_plan_pkl_filename())
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Data preproccesing for DFDC')
+
+    parser.add_argument('--apply_aug_to_sample', action='store_true',
+                        help='Apply augmentaion and destractions to a file',
+                        default=False)
+    parser.add_argument('--gen_aug_plan', action='store_true',
+                        help='Gen augmentaion plan',
+                        default=False)
+    parser.add_argument('--apply_aug_to_all', action='store_true',
+                        help='Apply augmentaion and destractions to all samples',
+                        default=False)
+    parser.add_argument('--data_root_dir', help='Root dir for DFDC train dataset',
+                        default=get_default_train_data_path())
+    parser.add_argument('--data_backup_dir', help='Root dir for DFDC train dataset',
+                        default='/home/therock/data5/dataset_master/deepfake_dfdc/train/')
+    parser.add_argument('--restore_aug_files', action='store_true',
+                        help='Restore augmented files',
+                        default=False)
+    parser.add_argument('--compress_videos', action='store_true',
+                        help='Compress all videos (adaptive compression to maintain approx median filesize',
+                        default=False)
+
+    args = parser.parse_args()
+    print(args)
+    create_assets_placeholder()
+
     main()
