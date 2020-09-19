@@ -441,26 +441,26 @@ def main():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Data preproccesing for DFDC')
+    parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
 
     parser.add_argument('--apply_aug_to_sample', action='store_true',
-                        help='Apply augmentaion and destractions to a file',
+                        help='Apply augmentation and distractions to a file',
                         default=False)
     parser.add_argument('--gen_aug_plan', action='store_true',
-                        help='Gen augmentaion plan',
+                        help='Gen augmentation plan',
                         default=False)
     parser.add_argument('--apply_aug_to_all', action='store_true',
-                        help='Apply augmentaion and destractions to all samples',
+                        help='Apply augmentation and distractions to all samples',
                         default=False)
     parser.add_argument('--data_root_dir', help='Root dir for DFDC train dataset',
                         default=get_default_train_data_path())
     parser.add_argument('--data_backup_dir', help='Root dir for DFDC train dataset',
-                        default='/home/therock/data5/dataset_master/deepfake_dfdc/train/')
+                        default=get_backup_train_data_path())
     parser.add_argument('--restore_aug_files', action='store_true',
                         help='Restore augmented files',
                         default=False)
     parser.add_argument('--compress_videos', action='store_true',
-                        help='Compress all videos (adaptive compression to maintain approx median filesize',
+                        help='Compress all videos (adaptive compression to maintain approx median filesize)',
                         default=False)
 
     args = parser.parse_args()

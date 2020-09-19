@@ -214,6 +214,10 @@ def get_default_train_data_path():
     config = load_config()
     return config['data_path']['train']
 
+def get_backup_train_data_path():
+    config = load_config()
+    return config['data_path']['train_backup']
+
 
 def get_default_test_data_path():
     config = load_config()
