@@ -225,3 +225,8 @@ def get_files_size(train_data_path, in_MB=False):
 def get_faces_loc_data_path():
     config = load_config()
     return os.path.join(get_assets_folder(), config['features']['face_location_data_path'])
+
+
+def get_faces_loc_video_path():
+    config = load_config()
+    return os.path.join(get_assets_folder(), config['features']['face_location_video_data_path'])

@@ -408,14 +408,24 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
         df.to_csv(get_compression_csv_path(), mode='a', header=False)
 
 
-def extract_faces_batch(data_root_dir):
-    faces_loc_path = get_faces_loc_data_path()
+def extract_faces_batch(data_root_dir, faces_loc_path):
     os.makedirs(faces_loc_path, exist_ok=True)
     detector = fd.get_face_detector_model()
 
     inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_22/ibhoivgoml.mp4'
-    #inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
+    # inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
     fd.extract_faces_from_video(inp, faces_loc_path, batch_size=32, detector=detector)
+
+
+def recreate_fboxes_video_batch(data_root_dir, faces_loc_path):
+    in_videofile = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_22/ibhoivgoml.mp4'
+    in_videofile = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
+    json_filename = os.path.splitext(os.path.basename(in_videofile))[0] + '.json'
+    json_filepath = os.path.join(faces_loc_path, json_filename)
+    out_path = get_faces_loc_video_path()
+    os.makedirs(out_path, exist_ok=True)
+    out_videofile = os.path.join(out_path, os.path.basename(in_videofile))
+    fd.recreate_fboxes_video(in_videofile, out_videofile, json_filepath)
 
 
 def main():
@@ -451,7 +461,10 @@ def main():
         adaptive_video_compress_batch(args.data_root_dir, get_data_aug_plan_pkl_filename())
 
     if args.extract_faces:
-        extract_faces_batch(args.data_root_dir)
+        extract_faces_batch(args.data_root_dir, get_faces_loc_data_path())
+
+    if args.recreate_fboxes_video:
+        recreate_fboxes_video_batch(args.data_root_dir, get_faces_loc_data_path())
 
 
 if __name__ == '__main__':
@@ -478,6 +491,10 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--extract_faces', action='store_true',
                         help='Detect faces from videos and store json for each face locations',
+                        default=False)
+
+    parser.add_argument('--recreate_fboxes_video', action='store_true',
+                        help='Use json file to overlay box on faces',
                         default=False)
 
     args = parser.parse_args()

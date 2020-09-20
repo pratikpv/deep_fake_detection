@@ -4,6 +4,7 @@ import torch
 from facenet_pytorch.models.mtcnn import MTCNN
 import cv2
 from data_utils.utils import *
+import json
 
 
 def get_face_detector_model(name='default'):
@@ -91,3 +92,27 @@ def extract_faces_from_video(input_videofile, out_dir, batch_size=32, detector=N
     out_file = os.path.join(out_dir, "{}.json".format(id))
     with open(out_file, "w") as f:
         json.dump(result, f)
+
+
+def recreate_fboxes_video(in_videofile, out_videofile, json_file):
+    capture = cv2.VideoCapture(in_videofile)
+    frames_num = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    org_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    org_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    org_res = (org_width, org_height)
+    org_fps = int(capture.get(cv2.CAP_PROP_FPS))
+    with open(json_file, 'r') as jf:
+        face_box_dict = json.load(jf)
+    frames = list()
+    for i in range(frames_num):
+        capture.grab()
+        success, frame = capture.retrieve()
+        if not success:
+            continue
+        face_box = face_box_dict[str(i)]
+        if face_box is not None:
+            for f in range(len(face_box)):
+                fc = list(map(int, face_box[f]))
+                cv2.rectangle(frame, (fc[0], fc[1]), (fc[2], fc[3]), (0, 255, 0), 4)
+        frames.append(frame)
+    create_video_from_images(frames, out_videofile, fps=org_fps, res=org_res)

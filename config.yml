@@ -15,3 +15,4 @@ data_augmentation:
   compression_csv: 'data_compression.csv'
 features:
   face_location_data_path: 'face_location_data'
+  face_location_video_data_path: 'face_location_video_data'
