@@ -5,6 +5,7 @@ from data_utils.utils import *
 import data_utils.augmentation as augmentation
 import data_utils.distractions as distractions
 import data_utils.face_detection as fd
+import torch
 import os
 import cv2
 from utils import *
@@ -408,13 +409,48 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
         df.to_csv(get_compression_csv_path(), mode='a', header=False)
 
 
-def extract_faces_batch(data_root_dir, faces_loc_path):
-    os.makedirs(faces_loc_path, exist_ok=True)
-    detector = fd.get_face_detector_model()
+def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
+    try:
+        start_method = torch.multiprocessing.get_start_method()
+        torch.multiprocessing.set_start_method('spawn')
+    except RuntimeError:
+        print('Failed to set start method to spawn, CUDA multiprocessing might fail')
 
-    inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_22/ibhoivgoml.mp4'
-    # inp = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
-    fd.extract_faces_from_video(inp, faces_loc_path, batch_size=32, detector=detector)
+    os.makedirs(faces_loc_path, exist_ok=True)
+    detector = None  # fd.get_face_detector_model()
+
+    all_files = get_all_video_filepaths(root_dir=data_root_dir)
+    num_of_files = len(all_files)
+    batch_size = 32
+
+    files_to_process = list()
+    if not overwrite:
+        for idx in tqdm(range(num_of_files), desc="Checking existing json files"):
+            inp = all_files[idx]
+            id = os.path.splitext(os.path.basename(inp))[0]
+            out_file = os.path.join(faces_loc_path, "{}.json".format(id))
+            if os.path.isfile(out_file):
+                continue
+            else:
+                files_to_process.append(inp)
+    else:
+        files_to_process = all_files
+
+    num_of_files = len(files_to_process)
+    # processes = multiprocessing.cpu_count()
+    processes = 4
+    with multiprocessing.Pool(processes=processes) as pool:
+        with tqdm(total=num_of_files) as pbar:
+            for v in pool.imap_unordered(
+                    partial(fd.extract_faces_from_video, out_dir=faces_loc_path, batch_size=batch_size,
+                            detector=detector),
+                    files_to_process):
+                pbar.update()
+
+    try:
+        torch.multiprocessing.set_start_method(start_method)
+    except RuntimeError:
+        pass
 
 
 def recreate_fboxes_video_batch(data_root_dir, faces_loc_path):

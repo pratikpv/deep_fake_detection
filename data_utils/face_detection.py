@@ -52,11 +52,10 @@ def extract_faces_from_image(image):
     return face_boxes
 
 
-def extract_faces_from_video(input_videofile, out_dir, batch_size=32, detector=None):
+def extract_faces_from_video(input_videofile, out_dir=None, batch_size=32, detector=None):
     capture = cv2.VideoCapture(input_videofile)
     frames_num = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     id = os.path.splitext(os.path.basename(input_videofile))[0]
-
     if detector is None:
         detector = get_face_detector_model()
 
