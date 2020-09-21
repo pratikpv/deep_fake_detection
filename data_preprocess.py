@@ -482,6 +482,17 @@ def validate_augmented_videos_batch(data_augmentation_plan_filename):
     df.to_csv(get_video_integrity_data_path())
 
 
+def restore_bad_augmented_files(get_video_integrity_data_path, data_backup_dir, data_root_dir):
+    df = pd.read_csv(get_video_integrity_data_path)
+    df = df[df['status'] != 'valid']
+
+    for index, row in tqdm(df.iterrows(), total=df.shape[0]):
+        dest = row['filename']
+        src = os.path.join(data_backup_dir, os.path.sep.join(dest.split(os.path.sep)[-2:]))
+        if os.path.exists(src):
+            shutil.copy(src, dest)
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -510,6 +521,10 @@ def main():
     if args.restore_aug_files:
         print('Restoring all augmented files from backup')
         restore_augmented_files(get_aug_metadata_folder(), args.data_backup_dir, args.data_root_dir)
+
+    if args.restore_bad_aug_files:
+        print('Restoring invalid augmented files from backup')
+        restore_bad_augmented_files(get_video_integrity_data_path(), args.data_backup_dir, args.data_root_dir)
 
     if args.compress_videos:
         adaptive_video_compress_batch(args.data_root_dir, get_data_aug_plan_pkl_filename())
@@ -542,6 +557,9 @@ if __name__ == '__main__':
                         default=get_backup_train_data_path())
     parser.add_argument('--restore_aug_files', action='store_true',
                         help='Restore augmented files',
+                        default=False)
+    parser.add_argument('--restore_bad_aug_files', action='store_true',
+                        help='Restore bad augmented files',
                         default=False)
     parser.add_argument('--compress_videos', action='store_true',
                         help='Compress all videos (adaptive compression to maintain approx median filesize)',
