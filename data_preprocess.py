@@ -464,6 +464,24 @@ def recreate_fboxes_video_batch(data_root_dir, faces_loc_path):
     fd.recreate_fboxes_video(in_videofile, out_videofile, json_filepath)
 
 
+def validate_augmented_videos_batch(data_augmentation_plan_filename):
+    with open(data_augmentation_plan_filename, 'rb') as f:
+        data_augmentation_plan = pickle.load(f)
+
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        results = []
+        for filename, plan in tqdm(data_augmentation_plan, desc='Scheduling jobs'):
+            jobs.append(pool.apply_async(get_video_integrity, (filename,)))
+
+        for job in tqdm(jobs, desc="Verifying data integrity"):
+            r = job.get()
+            results.append(r)
+
+    df = pd.DataFrame(results).set_index('filename')
+    df.to_csv(get_video_integrity_data_path())
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -502,6 +520,9 @@ def main():
     if args.recreate_fboxes_video:
         recreate_fboxes_video_batch(args.data_root_dir, get_faces_loc_data_path())
 
+    if args.validate_aug_video:
+        validate_augmented_videos_batch(get_data_aug_plan_pkl_filename())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -533,6 +554,9 @@ if __name__ == '__main__':
                         help='Use json file to overlay box on faces',
                         default=False)
 
+    parser.add_argument('--validate_aug_video', action='store_true',
+                        help='Use ffmpeg to check if augmented video is valid',
+                        default=False)
     args = parser.parse_args()
     print(args)
     create_assets_placeholder()

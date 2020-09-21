@@ -230,3 +230,35 @@ def get_faces_loc_data_path():
 def get_faces_loc_video_path():
     config = load_config()
     return os.path.join(get_assets_folder(), config['features']['face_location_video_data_path'])
+
+
+def get_video_integrity_data_path():
+    config = load_config()
+    return os.path.join(get_assets_folder(), config['data_augmentation']['integrity_csv'])
+
+
+def get_video_integrity(input_videofile):
+    command = ['ffmpeg', '-v', 'error', '-i', input_videofile, '-f', 'null', '-']
+    result = {'filename': input_videofile,
+              'status': 'valid'}
+    try:
+        # print(command)
+        process = Popen(command, stdout=PIPE, stderr=PIPE)
+        process.wait()
+        p_out, p_err = process.communicate()
+        p_err = str(p_err)[2:-1]
+        p_out = str(p_out)[2:-1]
+        #print(f'err: {p_err}, len = {len(p_err)}')
+        #print(f'out: {p_out}, len = {len(p_err)}')
+
+        if len(p_err) > 0:
+            result['status'] = 'invalid'
+            return result
+        else:
+            result['status'] = 'valid'
+            return result
+    except Exception as e:
+        print_line()
+        print("Failed to get_video_integrity", str(e))
+        result['status'] = 'failed_to_check'
+        return result
