@@ -237,6 +237,11 @@ def get_video_integrity_data_path():
     return os.path.join(get_assets_folder(), config['data_augmentation']['integrity_csv'])
 
 
+def get_crop_faces_data_path():
+    config = load_config()
+    return os.path.join(get_assets_folder(), config['features']['crop_faces'])
+
+
 def get_video_integrity(input_videofile):
     command = ['ffmpeg', '-v', 'error', '-i', input_videofile, '-f', 'null', '-']
     result = {'filename': input_videofile,
@@ -248,8 +253,8 @@ def get_video_integrity(input_videofile):
         p_out, p_err = process.communicate()
         p_err = str(p_err)[2:-1]
         p_out = str(p_out)[2:-1]
-        #print(f'err: {p_err}, len = {len(p_err)}')
-        #print(f'out: {p_out}, len = {len(p_err)}')
+        # print(f'err: {p_err}, len = {len(p_err)}')
+        # print(f'out: {p_out}, len = {len(p_err)}')
 
         if len(p_err) > 0:
             result['status'] = 'invalid'

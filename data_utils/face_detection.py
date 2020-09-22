@@ -115,3 +115,45 @@ def recreate_fboxes_video(in_videofile, out_videofile, json_file):
                 cv2.rectangle(frame, (fc[0], fc[1]), (fc[2], fc[3]), (0, 255, 0), 4)
         frames.append(frame)
     create_video_from_images(frames, out_videofile, fps=org_fps, res=org_res)
+
+
+def crop_faces_from_video(in_videofile, faces_json_path, crop_faces_out_dir, overwrite=False, frame_hops=10):
+    id = os.path.splitext(os.path.basename(in_videofile))[0]
+    json_file = os.path.join(faces_json_path, id + '.json')
+    out_dir = os.path.join(crop_faces_out_dir, id)
+    if not os.path.isfile(json_file):
+        return
+    if not overwrite and os.path.isdir(out_dir):
+        return
+
+    with open(json_file, 'r') as jf:
+        face_box_dict = json.load(jf)
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    capture = cv2.VideoCapture(in_videofile)
+    frames_num = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    for i in range(frames_num):
+        capture.grab()
+        if i % frame_hops != 0:
+            continue
+        success, frame = capture.retrieve()
+        if not success or str(i) not in face_box_dict:
+            continue
+
+        crops = []
+        bboxes = face_box_dict[str(i)]
+        if bboxes is None:
+            continue
+        for bbox in bboxes:
+            xmin, ymin, xmax, ymax = [int(b) for b in bbox]
+            w = xmax - xmin
+            h = ymax - ymin
+            p_h = h // 3
+            p_w = w // 3
+            crop = frame[max(ymin - p_h, 0):ymax + p_h, max(xmin - p_w, 0):xmax + p_w]
+            crops.append(crop)
+
+        for j, crop in enumerate(crops):
+            cv2.imwrite(os.path.join(out_dir, "{}_{}.png".format(i, j)), crop)

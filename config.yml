@@ -17,3 +17,4 @@ data_augmentation:
 features:
   face_location_data_path: 'face_location_data'
   face_location_video_data_path: 'face_location_video_data'
+  crop_faces: 'crop_faces'

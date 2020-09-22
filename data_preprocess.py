@@ -416,6 +416,7 @@ def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
     except RuntimeError:
         print('Failed to set start method to spawn, CUDA multiprocessing might fail')
 
+
     os.makedirs(faces_loc_path, exist_ok=True)
     detector = None  # fd.get_face_detector_model()
 
@@ -493,6 +494,20 @@ def restore_bad_augmented_files(get_video_integrity_data_path, data_backup_dir, 
             shutil.copy(src, dest)
 
 
+def crop_faces_from_videos_batch(data_root_dir, faces_json_path, crop_faces_out_dir):
+    all_files = get_all_video_filepaths(root_dir=data_root_dir)
+
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        results = []
+        for filename in tqdm(all_files, desc='Scheduling jobs'):
+            jobs.append(pool.apply_async(fd.crop_faces_from_video, (filename, faces_json_path, crop_faces_out_dir,)))
+
+        for job in tqdm(jobs, desc="Exacting faces from videos"):
+            r = job.get()
+            results.append(r)
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -538,6 +553,9 @@ def main():
     if args.validate_aug_video:
         validate_augmented_videos_batch(get_data_aug_plan_pkl_filename())
 
+    if args.crop_faces:
+        crop_faces_from_videos_batch(args.data_root_dir, get_faces_loc_data_path(), get_crop_faces_data_path())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -575,6 +593,11 @@ if __name__ == '__main__':
     parser.add_argument('--validate_aug_video', action='store_true',
                         help='Use ffmpeg to check if augmented video is valid',
                         default=False)
+
+    parser.add_argument('--crop_faces', action='store_true',
+                        help='Use ffmpeg to check if augmented video is valid',
+                        default=False)
+
     args = parser.parse_args()
     print(args)
     create_assets_placeholder()
