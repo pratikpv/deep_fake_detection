@@ -412,7 +412,7 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
 def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
     try:
         start_method = torch.multiprocessing.get_start_method()
-        torch.multiprocessing.set_start_method('spawn')
+        torch.multiprocessing.set_start_method('spawn', True)
     except RuntimeError:
         print('Failed to set start method to spawn, CUDA multiprocessing might fail')
 
