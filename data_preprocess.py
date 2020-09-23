@@ -416,7 +416,6 @@ def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
     except RuntimeError:
         print('Failed to set start method to spawn, CUDA multiprocessing might fail')
 
-
     os.makedirs(faces_loc_path, exist_ok=True)
     detector = None  # fd.get_face_detector_model()
 
@@ -495,9 +494,13 @@ def restore_bad_augmented_files(get_video_integrity_data_path, data_backup_dir, 
 
 
 def crop_faces_from_videos_batch(data_root_dir, faces_json_path, crop_faces_out_dir):
-    all_files = get_all_video_filepaths(root_dir=data_root_dir)
+    print(f'data_root_dir = {data_root_dir}')
+    print(f'faces_json_path = {faces_json_path}')
+    print(f'crop_faces_out_dir = {crop_faces_out_dir}')
 
-    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+    all_files = get_all_video_filepaths(root_dir=data_root_dir)
+    # multiprocessing.cpu_count()
+    with multiprocessing.Pool(2) as pool:
         jobs = []
         results = []
         for filename in tqdm(all_files, desc='Scheduling jobs'):
@@ -556,6 +559,11 @@ def main():
     if args.crop_faces:
         crop_faces_from_videos_batch(args.data_root_dir, get_faces_loc_data_path(), get_crop_faces_data_path())
 
+    if args.consol_train_labels:
+        csv_file = get_train_labels_csv_filepath()
+        consolidate_training_labels(args.data_root_dir, csv_file)
+        print(f'Saved {csv_file}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -596,6 +604,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--crop_faces', action='store_true',
                         help='Use ffmpeg to check if augmented video is valid',
+                        default=False)
+
+    parser.add_argument('--consol_train_labels', action='store_true',
+                        help='Consolidate all training samples with their labels',
                         default=False)
 
     args = parser.parse_args()

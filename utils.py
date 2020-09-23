@@ -74,3 +74,7 @@ def print_banner():
 def create_assets_placeholder():
     os.makedirs(get_assets_folder(), exist_ok=True)
     os.makedirs(get_aug_metadata_folder(), exist_ok=True)
+
+
+def alpha_sort_keys(item):
+    return int(os.path.splitext(os.path.basename(item))[0])

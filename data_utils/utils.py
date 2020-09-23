@@ -139,7 +139,7 @@ def get_original_with_fakes(root_dir):
     return pairs
 
 
-def get_originals_and_fakes(root_dir):
+def get_reals_and_fakes(root_dir):
     originals = []
     fakes = []
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
@@ -147,9 +147,9 @@ def get_originals_and_fakes(root_dir):
             metadata = json.load(f)
         for k, v in metadata.items():
             if v["label"] == "FAKE":
-                fakes.append(k[:-4])
+                fakes.append(k)
             else:
-                originals.append(k[:-4])
+                originals.append(k)
 
     return originals, fakes
 
@@ -267,3 +267,30 @@ def get_video_integrity(input_videofile):
         print("Failed to get_video_integrity", str(e))
         result['status'] = 'failed_to_check'
         return result
+
+
+def get_train_labels_csv_filepath():
+    config = load_config()
+    return os.path.join(get_assets_folder(), config['data_path']['train_labels_csv'])
+
+
+def get_valid_labels_csv_filepath():
+    config = load_config()
+    return os.path.join(get_default_validation_data_path(), config['data_path']['valid_labels_csv'])
+
+
+def get_test_labels_csv_filepath():
+    config = load_config()
+    return os.path.join(get_default_test_data_path(), config['data_path']['test_labels_csv'])
+
+
+def consolidate_training_labels(data_root_dir, csv_file):
+    reals, fakes = get_reals_and_fakes(data_root_dir)
+    real_label = 0
+    fake_label = 1
+    df_real = pd.DataFrame(list(zip(reals, [real_label] * len(reals))),
+                           columns=['filename', 'label']).set_index('filename')
+    df_fake = pd.DataFrame(list(zip(fakes, [fake_label] * len(fakes))),
+                           columns=['filename', 'label']).set_index('filename')
+    df = df_real.append(df_fake)
+    df.to_csv(csv_file)

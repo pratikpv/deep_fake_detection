@@ -8,6 +8,9 @@ data_path:
   test: '/home/therock/data2/data_workset/dfdc/test/'
   validation: '/home/therock/data2/data_workset/dfdc/validation/'
   train_backup: '/home/therock/data5/dataset_master/deepfake_dfdc/train/'
+  train_labels_csv: 'train_labels.csv'
+  valid_labels_csv: 'labels.csv'
+  test_labels_csv: 'labels.csv'
 data_augmentation:
   plan_pkl_file: 'data_augmentation_plan.pkl'
   plan_txt_file: 'data_augmentation_plan.txt'
@@ -17,4 +20,4 @@ data_augmentation:
 features:
   face_location_data_path: 'face_location_data'
   face_location_video_data_path: 'face_location_video_data'
-  crop_faces: 'crop_faces'
+  crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/'
