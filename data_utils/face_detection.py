@@ -126,11 +126,15 @@ def crop_faces_from_video(in_videofile, faces_json_path, crop_faces_out_dir, ove
     if not overwrite and os.path.isdir(out_dir):
         return
 
-    with open(json_file, 'r') as jf:
-        face_box_dict = json.load(jf)
+    try:
+        with open(json_file, 'r') as jf:
+            face_box_dict = json.load(jf)
+    except Exception as e:
+        print(f'failed to parse {json_file}')
+        print(e)
+        raise e
 
     os.makedirs(out_dir, exist_ok=True)
-
     capture = cv2.VideoCapture(in_videofile)
     frames_num = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
