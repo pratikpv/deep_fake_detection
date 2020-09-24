@@ -413,7 +413,7 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
 
 def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
     batch_size = 32
-    #processes = multiprocessing.cpu_count()
+    # processes = multiprocessing.cpu_count()
     processes = 4
     os.makedirs(faces_loc_path, exist_ok=True)
     print(f'Saving json files at: {faces_loc_path}')
@@ -521,18 +521,10 @@ def crop_faces_from_videos_batch(input_videofiles, faces_json_path, crop_faces_o
 
 
 def validate_data_loaders(data_root_dir):
-    mode = 'train'
-    if mode == 'train':
-        data = get_all_training_video_filepaths(data_root_dir)
-
-    if mode == 'test':
-        data = get_all_training_video_filepaths(data_root_dir)
-
-    if mode == 'valid':
-        train_data = get_all_training_video_filepaths(data_root_dir)
+    data = get_all_training_video_filepaths(data_root_dir)
 
     data = data[0:4]
-    dataset = DFDCDataset(data, mode=mode)
+    dataset = DFDCDataset(data, mode='train')
 
     batch_size = 2
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=True,
