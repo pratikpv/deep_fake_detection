@@ -464,15 +464,36 @@ def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
             pass
 
 
-def create_fboxes_video_batch(data_root_dir, faces_loc_path):
-    in_videofile = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_22/ibhoivgoml.mp4'
-    in_videofile = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
-    json_filename = os.path.splitext(os.path.basename(in_videofile))[0] + '.json'
-    json_filepath = os.path.join(faces_loc_path, json_filename)
+def create_fboxes_video_batch(input_videofiles, json_files_path, sample_size, tag=None):
+    input_videofiles = random.sample(input_videofiles, sample_size)
     out_path = get_faces_loc_video_path()
+    if tag is not None:
+        out_path = os.path.join(out_path, tag)
     os.makedirs(out_path, exist_ok=True)
-    out_videofile = os.path.join(out_path, os.path.basename(in_videofile))
-    fd.recreate_fboxes_video(in_videofile, out_videofile, json_filepath)
+
+    print(f'Saving videos in {out_path}')
+
+    files_to_process = []
+    for in_videofile in input_videofiles:
+        json_filename = os.path.splitext(os.path.basename(in_videofile))[0] + '.json'
+        json_filepath = os.path.join(json_files_path, json_filename)
+        if not os.path.isfile(json_filepath):
+            continue
+        out_videofile = os.path.join(out_path, os.path.basename(in_videofile))
+        files_to_process.append((in_videofile, out_videofile, json_filepath))
+
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        results = []
+        for file_tup in tqdm(files_to_process, desc="Scheduling jobs"):
+            in_videofile, out_videofile, json_filepath = file_tup
+            jobs.append(pool.apply_async(fd.recreate_fboxes_video,
+                                         (in_videofile, out_videofile, json_filepath,)
+                                         )
+                        )
+
+        for job in tqdm(jobs, desc="Creating videos"):
+            results.append(job.get())
 
 
 def validate_augmented_videos_batch(data_augmentation_plan_filename):
@@ -589,8 +610,16 @@ def main():
         extract_faces_batch(input_videofiles, get_test_json_faces_data_path())
 
     if args.create_fboxes_video:
-        print('Creating boxes around faces in sample training videos using json files')
-        create_fboxes_video_batch(args.train_data_root_dir, get_train_json_faces_data_path())
+        sample_size = 10
+        print(f'Creating boxes around faces in {sample_size} training videos using json files')
+        input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
+        create_fboxes_video_batch(input_videofiles, get_train_json_faces_data_path(), sample_size, 'train')
+        print(f'Creating boxes around faces in {sample_size} valid videos using json files')
+        input_videofiles = get_all_validation_video_filepaths(get_validation_data_path())
+        create_fboxes_video_batch(input_videofiles, get_valid_json_faces_data_path(), sample_size, 'valid')
+        print(f'Creating boxes around faces in {sample_size} test videos using json files')
+        input_videofiles = get_all_test_video_filepaths(get_test_data_path())
+        create_fboxes_video_batch(input_videofiles, get_test_json_faces_data_path(), sample_size, 'test')
 
     if args.validate_aug_video:
         print('Validating augmented files using ffmpeg')
