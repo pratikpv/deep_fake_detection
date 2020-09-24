@@ -412,47 +412,53 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
 
 
 def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
-    try:
-        start_method = torch.multiprocessing.get_start_method()
-        torch.multiprocessing.set_start_method('spawn', True)
-    except RuntimeError:
-        print('Failed to set start method to spawn, CUDA multiprocessing might fail')
-
+    batch_size = 32
+    #processes = multiprocessing.cpu_count()
+    processes = 4
     os.makedirs(faces_loc_path, exist_ok=True)
     print(f'Saving json files at: {faces_loc_path}')
     detector = None  # fd.get_face_detector_model()
-
     num_of_files = len(input_videofiles)
-    batch_size = 32
+    keep_trying = True
+    MAX_RETRIES = 5
+    retry_count = MAX_RETRIES
+    while keep_trying:
+        try:
+            start_method = torch.multiprocessing.get_start_method()
+            torch.multiprocessing.set_start_method('spawn', True)
 
-    files_to_process = list()
-    if not overwrite:
-        for idx in tqdm(range(num_of_files), desc="Checking existing json files"):
-            inp = input_videofiles[idx]
-            id = os.path.splitext(os.path.basename(inp))[0]
-            out_file = os.path.join(faces_loc_path, "{}.json".format(id))
-            if os.path.isfile(out_file):
-                continue
+            files_to_process = list()
+            if not overwrite:
+                for idx in tqdm(range(num_of_files), desc="Checking existing json files"):
+                    inp = input_videofiles[idx]
+                    id = os.path.splitext(os.path.basename(inp))[0]
+                    out_file = os.path.join(faces_loc_path, "{}.json".format(id))
+                    if os.path.isfile(out_file):
+                        continue
+                    else:
+                        files_to_process.append(inp)
             else:
-                files_to_process.append(inp)
-    else:
-        files_to_process = input_videofiles
+                files_to_process = input_videofiles
 
-    num_of_files = len(files_to_process)
-    # processes = multiprocessing.cpu_count()
-    processes = 4
-    with multiprocessing.Pool(processes=processes) as pool:
-        with tqdm(total=num_of_files) as pbar:
-            for v in pool.imap_unordered(
-                    partial(fd.extract_faces_from_video, out_dir=faces_loc_path, batch_size=batch_size,
-                            detector=detector),
-                    files_to_process):
-                pbar.update()
+            num_of_files = len(files_to_process)
+            with multiprocessing.Pool(processes=processes) as pool:
+                with tqdm(total=num_of_files) as pbar:
+                    for v in pool.imap_unordered(
+                            partial(fd.extract_faces_from_video, out_dir=faces_loc_path, batch_size=batch_size,
+                                    detector=detector),
+                            files_to_process):
+                        pbar.update()
 
-    try:
-        torch.multiprocessing.set_start_method(start_method)
-    except RuntimeError:
-        pass
+            torch.multiprocessing.set_start_method(start_method)
+        except RuntimeError:
+            if retry_count <= 0:
+                processes = max(processes - 1, 1)
+                print(f'Retry with lower number of processes. processes = {processes}')
+                retry_count = MAX_RETRIES
+            else:
+                print(f'Retry with same number of processes. retry_count = {retry_count}')
+                retry_count -= 1
+            pass
 
 
 def create_fboxes_video_batch(data_root_dir, faces_loc_path):
@@ -501,11 +507,13 @@ def crop_faces_from_videos_batch(input_videofiles, faces_json_path, crop_faces_o
     os.makedirs(crop_faces_out_dir, exist_ok=True)
 
     # multiprocessing.cpu_count()
+
     with multiprocessing.Pool(2) as pool:
         jobs = []
         results = []
         for filename in tqdm(input_videofiles, desc='Scheduling jobs'):
-            jobs.append(pool.apply_async(fd.crop_faces_from_video, (filename, faces_json_path, crop_faces_out_dir,)))
+            jobs.append(
+                pool.apply_async(fd.crop_faces_from_video, (filename, faces_json_path, crop_faces_out_dir,)))
 
         for job in tqdm(jobs, desc="Exacting faces from videos"):
             r = job.get()
@@ -575,9 +583,9 @@ def main():
         adaptive_video_compress_batch(args.train_data_root_dir, get_data_aug_plan_pkl_filename())
 
     if args.extract_faces:
-        print('Detecting faces in training videos and saving in json files')
-        input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
-        extract_faces_batch(input_videofiles, get_train_json_faces_data_path())
+        # print('Detecting faces in training videos and saving in json files')
+        # input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
+        # extract_faces_batch(input_videofiles, get_train_json_faces_data_path())
         print('Detecting faces in validation videos and saving in json files')
         input_videofiles = get_all_validation_video_filepaths(get_validation_data_path())
         extract_faces_batch(input_videofiles, get_valid_json_faces_data_path())
