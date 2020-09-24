@@ -17,6 +17,8 @@ import pickle
 import traceback
 import argparse
 import numpy as np
+from data_utils.datasets import DFDCDataset
+from torch.utils.data import DataLoader
 
 
 def test_data_augmentation(input_file, output_folder):
@@ -511,6 +513,30 @@ def crop_faces_from_videos_batch(data_root_dir, faces_json_path, crop_faces_out_
             results.append(r)
 
 
+def validate_data_loaders(data_root_dir):
+    mode = 'train'
+    if mode == 'train':
+        data = get_all_video_filepaths(data_root_dir)
+
+    if mode == 'test':
+        data = get_all_video_filepaths(data_root_dir)
+
+    if mode == 'valid':
+        train_data = get_all_video_filepaths(data_root_dir)
+
+    data = data[0:4]
+    dataset = DFDCDataset(data, mode=mode)
+
+    batch_size = 2
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=True,
+                                   collate_fn=lambda x: tuple(zip(*x)))
+    print(f'len train_data_loader = {len(data_loader)}')
+
+    for idx, sample in enumerate(data_loader):
+        video_id, frames, label = sample[0], sample[1], sample[2]
+        print(f'---- index = {idx} video_id = {video_id}, frames = {frames}, label = {label} -----')
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -564,6 +590,9 @@ def main():
         consolidate_training_labels(args.data_root_dir, csv_file)
         print(f'Saved {csv_file}')
 
+    if args.validate_data_loaders:
+        validate_data_loaders(args.data_root_dir)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -608,6 +637,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--consol_train_labels', action='store_true',
                         help='Consolidate all training samples with their labels',
+                        default=False)
+
+    parser.add_argument('--validate_data_loaders', action='store_true',
+                        help='Create data loaders and validate its functionality',
                         default=False)
 
     args = parser.parse_args()
