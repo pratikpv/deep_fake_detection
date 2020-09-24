@@ -418,7 +418,7 @@ def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
     os.makedirs(faces_loc_path, exist_ok=True)
     print(f'Saving json files at: {faces_loc_path}')
     detector = None  # fd.get_face_detector_model()
-    num_of_files = len(input_videofiles)
+
     keep_trying = True
     MAX_RETRIES = 5
     retry_count = MAX_RETRIES
@@ -427,6 +427,7 @@ def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
             start_method = torch.multiprocessing.get_start_method()
             torch.multiprocessing.set_start_method('spawn', True)
 
+            num_of_files = len(input_videofiles)
             files_to_process = list()
             if not overwrite:
                 for idx in tqdm(range(num_of_files), desc="Checking existing json files"):
@@ -441,6 +442,8 @@ def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
                 files_to_process = input_videofiles
 
             num_of_files = len(files_to_process)
+            if num_of_files == 0:
+                return
             with multiprocessing.Pool(processes=processes) as pool:
                 with tqdm(total=num_of_files) as pbar:
                     for v in pool.imap_unordered(
