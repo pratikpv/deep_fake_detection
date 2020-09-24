@@ -107,7 +107,7 @@ sample entries from metadata.json
 """
 
 
-def get_original_video_paths(root_dir, basename=False):
+def get_original_training_video_paths(root_dir, basename=False):
     originals = set()
     originals_v = set()
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
@@ -126,7 +126,7 @@ def get_original_video_paths(root_dir, basename=False):
     return originals_v if basename else originals
 
 
-def get_original_with_fakes(root_dir):
+def get_training_original_with_fakes(root_dir):
     pairs = []
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
         with open(json_path, "r") as f:
@@ -139,7 +139,7 @@ def get_original_with_fakes(root_dir):
     return pairs
 
 
-def get_reals_and_fakes(root_dir):
+def get_training_reals_and_fakes(root_dir):
     originals = []
     fakes = []
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
@@ -154,7 +154,7 @@ def get_reals_and_fakes(root_dir):
     return originals, fakes
 
 
-def get_all_video_filepaths(root_dir):
+def get_all_training_video_filepaths(root_dir):
     video_filepaths = []
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
         dir = Path(json_path).parent
@@ -163,6 +163,20 @@ def get_all_video_filepaths(root_dir):
         for k, v in metadata.items():
             full_path = os.path.join(dir, k)
             video_filepaths.append(full_path)
+    return video_filepaths
+
+
+def get_all_validation_video_filepaths(root_dir):
+    video_filepaths = []
+    for f in glob(os.path.join(root_dir, "*.mp4")):
+        video_filepaths.append(os.path.join(root_dir, f))
+    return video_filepaths
+
+
+def get_all_test_video_filepaths(root_dir):
+    video_filepaths = []
+    for f in glob(os.path.join(root_dir, "*.mp4")):
+        video_filepaths.append(os.path.join(root_dir, f))
     return video_filepaths
 
 
@@ -181,33 +195,8 @@ def restore_augmented_files(aug_metadata, src_root, dest_root):
         shutil.copyfile(src_path, dest_path)
 
 
-def get_default_train_data_path():
-    config = load_config()
-    return config['data_path']['train']
-
-
-def get_backup_train_data_path():
-    config = load_config()
-    return config['data_path']['train_backup']
-
-
-def get_default_test_data_path():
-    config = load_config()
-    return config['data_path']['test']
-
-
-def get_default_validation_data_path():
-    config = load_config()
-    return config['data_path']['valid']
-
-
-def get_compression_csv_path():
-    config = load_config()
-    return os.path.join(get_assets_folder(), config['data_augmentation']['compression_csv'])
-
-
 def get_files_size(train_data_path, in_MB=False):
-    v_paths = get_all_video_filepaths(train_data_path)
+    v_paths = get_all_training_video_filepaths(train_data_path)
     file_size_map = list()
     for v in v_paths:
         try:
@@ -220,26 +209,6 @@ def get_files_size(train_data_path, in_MB=False):
             pass
 
     return file_size_map
-
-
-def get_faces_loc_data_path():
-    config = load_config()
-    return os.path.join(get_assets_folder(), config['features']['face_location_data_path'])
-
-
-def get_faces_loc_video_path():
-    config = load_config()
-    return os.path.join(get_assets_folder(), config['features']['face_location_video_data_path'])
-
-
-def get_video_integrity_data_path():
-    config = load_config()
-    return os.path.join(get_assets_folder(), config['data_augmentation']['integrity_csv'])
-
-
-def get_crop_faces_data_path():
-    config = load_config()
-    return os.path.join(get_assets_folder(), config['features']['crop_faces'])
 
 
 def get_video_integrity(input_videofile):
@@ -269,23 +238,8 @@ def get_video_integrity(input_videofile):
         return result
 
 
-def get_train_labels_csv_filepath():
-    config = load_config()
-    return os.path.join(get_assets_folder(), config['data_path']['train_labels_csv'])
-
-
-def get_valid_labels_csv_filepath():
-    config = load_config()
-    return os.path.join(get_default_validation_data_path(), config['data_path']['valid_labels_csv'])
-
-
-def get_test_labels_csv_filepath():
-    config = load_config()
-    return os.path.join(get_default_test_data_path(), config['data_path']['test_labels_csv'])
-
-
 def consolidate_training_labels(data_root_dir, csv_file):
-    reals, fakes = get_reals_and_fakes(data_root_dir)
+    reals, fakes = get_training_reals_and_fakes(data_root_dir)
     real_label = 0
     fake_label = 1
     df_real = pd.DataFrame(list(zip(reals, [real_label] * len(reals))),

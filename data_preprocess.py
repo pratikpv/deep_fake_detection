@@ -62,23 +62,6 @@ def test_data_augmentation(input_file, output_folder):
             results.append(job.get())
 
 
-def locate_faces(input_root, output_root):
-    os.makedirs(output_root, exist_ok=True)
-    input_filepath_list = glob(input_root + '/*.mp4')
-    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-        jobs = []
-        results = []
-        for input_filepath in input_filepath_list:
-            output_filepath = os.path.join(output_root, os.path.basename(input_filepath))
-            jobs.append(pool.apply_async(augmentation.locate_face_in_videofile,
-                                         (input_filepath, output_filepath,),
-                                         )
-                        )
-
-        for job in tqdm(jobs, desc="Tracking faces"):
-            results.append(job.get())
-
-
 def test_data_distraction(input_file, output_folder):
     """
     Test all kinds of data distraction. Applies supported distraction to input_file
@@ -111,6 +94,23 @@ def test_data_distraction(input_file, output_folder):
     return results
 
 
+def locate_faces_batch(input_root, output_root):
+    os.makedirs(output_root, exist_ok=True)
+    input_filepath_list = glob(input_root + '/*.mp4')
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        results = []
+        for input_filepath in input_filepath_list:
+            output_filepath = os.path.join(output_root, os.path.basename(input_filepath))
+            jobs.append(pool.apply_async(augmentation.locate_face_in_videofile,
+                                         (input_filepath, output_filepath,),
+                                         )
+                        )
+
+        for job in tqdm(jobs, desc="Tracking faces"):
+            results.append(job.get())
+
+
 def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
     id = os.path.splitext(os.path.basename(org_file))[0]
     org_out_images = os.path.join(aug_output_folder, id + '_original')
@@ -120,19 +120,19 @@ def generate_poster(org_file, aug_output_folder, frames_count=10, out_res=None):
         if os.path.isdir(f):
             sub_fol.append(f)
     sub_fol_count = len(sub_fol)
-    print(f'sub_fol_count {sub_fol_count}')
+    # print(f'sub_fol_count {sub_fol_count}')
     result_grid_filename = os.path.join(aug_output_folder, 'poster.jpg')
 
     total_frames = 300
     step = int(total_frames / frames_count)
     images_list = ['{}.jpg'.format(i) for i in range(0, total_frames, step)]
     images_count = len(images_list)
-    print('Images: ', images_list)
-    print('Images count: ', images_count)
+    # print('Images: ', images_list)
+    # print('Images count: ', images_count)
 
     out_res_per_image = 1920, 1080
     result_figsize_resolution = out_res_per_image[0] * images_count, out_res_per_image[1] * images_count
-    print(f'result_figsize_resolution = {result_figsize_resolution}')
+    # print(f'result_figsize_resolution = {result_figsize_resolution}')
     fig, axes = plt.subplots(sub_fol_count, frames_count,
                              figsize=(40, 40)
                              )
@@ -167,7 +167,7 @@ def generate_data_augmentation_plan(root_dir=None, plan_pkl_file=None, plan_txt_
     # augmentation to 5%
     #
 
-    results = get_all_video_filepaths(root_dir=root_dir)
+    results = get_all_training_video_filepaths(root_dir=root_dir)
     polulation_size = len(results)
     random.shuffle(results)
 
@@ -288,7 +288,7 @@ def generate_data_augmentation_plan(root_dir=None, plan_pkl_file=None, plan_txt_
     return data_augmentation_plan
 
 
-def plan_already_executed(filename, plan, metadata_folder):
+def check_plan_already_executed(filename, plan, metadata_folder):
     id = os.path.basename(filename)
     file_search = metadata_folder + '/{}*'.format(id)
     pe_files = glob(file_search)
@@ -322,7 +322,7 @@ def execute_data_augmentation_plan(data_augmentation_plan_filename, metadata_fol
             for filename, plan in tqdm(data_augmentation_plan, desc=desc):
                 if len(plan) > plan_id:
                     p = plan[plan_id]
-                    if plan_already_executed(filename, p, metadata_folder):
+                    if check_plan_already_executed(filename, p, metadata_folder):
                         continue
                     if 'augmentation' in p.keys():
                         distr = p['augmentation']
@@ -411,7 +411,7 @@ def adaptive_video_compress_batch(data_root_dir, data_augmentation_plan_filename
         df.to_csv(get_compression_csv_path(), mode='a', header=False)
 
 
-def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
+def extract_faces_batch(input_videofiles, faces_loc_path, overwrite=False):
     try:
         start_method = torch.multiprocessing.get_start_method()
         torch.multiprocessing.set_start_method('spawn', True)
@@ -419,16 +419,16 @@ def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
         print('Failed to set start method to spawn, CUDA multiprocessing might fail')
 
     os.makedirs(faces_loc_path, exist_ok=True)
+    print(f'Saving json files at: {faces_loc_path}')
     detector = None  # fd.get_face_detector_model()
 
-    all_files = get_all_video_filepaths(root_dir=data_root_dir)
-    num_of_files = len(all_files)
+    num_of_files = len(input_videofiles)
     batch_size = 32
 
     files_to_process = list()
     if not overwrite:
         for idx in tqdm(range(num_of_files), desc="Checking existing json files"):
-            inp = all_files[idx]
+            inp = input_videofiles[idx]
             id = os.path.splitext(os.path.basename(inp))[0]
             out_file = os.path.join(faces_loc_path, "{}.json".format(id))
             if os.path.isfile(out_file):
@@ -436,7 +436,7 @@ def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
             else:
                 files_to_process.append(inp)
     else:
-        files_to_process = all_files
+        files_to_process = input_videofiles
 
     num_of_files = len(files_to_process)
     # processes = multiprocessing.cpu_count()
@@ -455,7 +455,7 @@ def extract_faces_batch(data_root_dir, faces_loc_path, overwrite=False):
         pass
 
 
-def recreate_fboxes_video_batch(data_root_dir, faces_loc_path):
+def create_fboxes_video_batch(data_root_dir, faces_loc_path):
     in_videofile = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_22/ibhoivgoml.mp4'
     in_videofile = '/home/therock/data2/data_workset/dfdc/train/dfdc_train_part_30/ajxcpxpmof.mp4'
     json_filename = os.path.splitext(os.path.basename(in_videofile))[0] + '.json'
@@ -495,17 +495,16 @@ def restore_bad_augmented_files(get_video_integrity_data_path, data_backup_dir, 
             shutil.copy(src, dest)
 
 
-def crop_faces_from_videos_batch(data_root_dir, faces_json_path, crop_faces_out_dir):
-    print(f'data_root_dir = {data_root_dir}')
+def crop_faces_from_videos_batch(input_videofiles, faces_json_path, crop_faces_out_dir):
     print(f'faces_json_path = {faces_json_path}')
     print(f'crop_faces_out_dir = {crop_faces_out_dir}')
+    os.makedirs(crop_faces_out_dir, exist_ok=True)
 
-    all_files = get_all_video_filepaths(root_dir=data_root_dir)
     # multiprocessing.cpu_count()
     with multiprocessing.Pool(2) as pool:
         jobs = []
         results = []
-        for filename in tqdm(all_files, desc='Scheduling jobs'):
+        for filename in tqdm(input_videofiles, desc='Scheduling jobs'):
             jobs.append(pool.apply_async(fd.crop_faces_from_video, (filename, faces_json_path, crop_faces_out_dir,)))
 
         for job in tqdm(jobs, desc="Exacting faces from videos"):
@@ -516,20 +515,20 @@ def crop_faces_from_videos_batch(data_root_dir, faces_json_path, crop_faces_out_
 def validate_data_loaders(data_root_dir):
     mode = 'train'
     if mode == 'train':
-        data = get_all_video_filepaths(data_root_dir)
+        data = get_all_training_video_filepaths(data_root_dir)
 
     if mode == 'test':
-        data = get_all_video_filepaths(data_root_dir)
+        data = get_all_training_video_filepaths(data_root_dir)
 
     if mode == 'valid':
-        train_data = get_all_video_filepaths(data_root_dir)
+        train_data = get_all_training_video_filepaths(data_root_dir)
 
     data = data[0:4]
     dataset = DFDCDataset(data, mode=mode)
 
     batch_size = 2
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=True,
-                                   collate_fn=lambda x: tuple(zip(*x)))
+                             collate_fn=lambda x: tuple(zip(*x)))
     print(f'len train_data_loader = {len(data_loader)}')
 
     for idx, sample in enumerate(data_loader):
@@ -541,57 +540,84 @@ def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
         sample_test_file = os.path.join('dfdc_train_part_30', 'ajxcpxpmof.mp4')
-        sample_test_file = os.path.join(args.data_root_dir, sample_test_file)
+        sample_test_file = os.path.join(args.train_data_root_dir, sample_test_file)
         print(f'sample file: {sample_test_file}')
 
-        aug_output_folder = os.path.join(args.data_root_dir, 'test_augmentation')
-        face_locate_out_folder = os.path.join(args.data_root_dir, 'test_augmentation_locate')
+        aug_output_folder = os.path.join(args.train_data_root_dir, 'test_augmentation')
+        face_locate_out_folder = os.path.join(args.train_data_root_dir, 'test_augmentation_locate')
 
         test_data_augmentation(sample_test_file, aug_output_folder)
         test_data_distraction(sample_test_file, aug_output_folder)
-        locate_faces(aug_output_folder, face_locate_out_folder)
+        locate_faces_batch(aug_output_folder, face_locate_out_folder)
         print(f'generating poster for samples')
         generate_poster(sample_test_file, aug_output_folder)
 
     if args.gen_aug_plan:
         print('Generating augmentation plan')
-        generate_data_augmentation_plan(args.data_root_dir, get_data_aug_plan_pkl_filename(),
+        generate_data_augmentation_plan(args.train_data_root_dir, get_data_aug_plan_pkl_filename(),
                                         get_data_aug_plan_txt_filename())
 
     if args.apply_aug_to_all:
         print('Executing augmentation plan')
-        execute_data_augmentation_plan(get_data_aug_plan_pkl_filename(), get_aug_metadata_folder())
+        execute_data_augmentation_plan(get_data_aug_plan_pkl_filename(), get_aug_metadata_path())
 
     if args.restore_aug_files:
         print('Restoring all augmented files from backup')
-        restore_augmented_files(get_aug_metadata_folder(), args.data_backup_dir, args.data_root_dir)
+        restore_augmented_files(get_aug_metadata_path(), args.train_data_backup_dir, args.train_data_root_dir)
 
     if args.restore_bad_aug_files:
         print('Restoring invalid augmented files from backup')
-        restore_bad_augmented_files(get_video_integrity_data_path(), args.data_backup_dir, args.data_root_dir)
+        restore_bad_augmented_files(get_video_integrity_data_path(), args.train_data_backup_dir,
+                                    args.train_data_root_dir)
 
     if args.compress_videos:
-        adaptive_video_compress_batch(args.data_root_dir, get_data_aug_plan_pkl_filename())
+        print('Compressing videos')
+        adaptive_video_compress_batch(args.train_data_root_dir, get_data_aug_plan_pkl_filename())
 
     if args.extract_faces:
-        extract_faces_batch(args.data_root_dir, get_faces_loc_data_path())
+        print('Detecting faces in training videos and saving in json files')
+        input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
+        extract_faces_batch(input_videofiles, get_train_json_faces_data_path())
+        print('Detecting faces in validation videos and saving in json files')
+        input_videofiles = get_all_validation_video_filepaths(get_validation_data_path())
+        extract_faces_batch(input_videofiles, get_valid_json_faces_data_path())
+        print('Detecting faces in test videos and saving in json files')
+        input_videofiles = get_all_test_video_filepaths(get_test_data_path())
+        extract_faces_batch(input_videofiles, get_test_json_faces_data_path())
 
-    if args.recreate_fboxes_video:
-        recreate_fboxes_video_batch(args.data_root_dir, get_faces_loc_data_path())
+    if args.create_fboxes_video:
+        print('Creating boxes around faces in sample training videos using json files')
+        create_fboxes_video_batch(args.train_data_root_dir, get_train_json_faces_data_path())
 
     if args.validate_aug_video:
+        print('Validating augmented files using ffmpeg')
         validate_augmented_videos_batch(get_data_aug_plan_pkl_filename())
 
     if args.crop_faces:
-        crop_faces_from_videos_batch(args.data_root_dir, get_faces_loc_data_path(), get_crop_faces_data_path())
+        print('Cropping faces from training videos')
+        input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
+
+        crop_faces_from_videos_batch(input_videofiles, get_train_json_faces_data_path(),
+                                     get_train_crop_faces_data_path())
+        print('Cropping faces from validation videos')
+        input_videofiles = get_all_validation_video_filepaths(get_validation_data_path())
+        crop_faces_from_videos_batch(input_videofiles, get_valid_json_faces_data_path(),
+                                     get_valid_crop_faces_data_path())
+        print('Cropping faces from test videos')
+        input_videofiles = get_all_test_video_filepaths(get_test_data_path())
+
+        crop_faces_from_videos_batch(input_videofiles, get_test_json_faces_data_path(),
+                                     get_test_crop_faces_data_path())
 
     if args.consol_train_labels:
+        print('Consolidate all filenames and related labels for training data')
         csv_file = get_train_labels_csv_filepath()
-        consolidate_training_labels(args.data_root_dir, csv_file)
+        consolidate_training_labels(args.train_data_root_dir, csv_file)
         print(f'Saved {csv_file}')
 
     if args.validate_data_loaders:
-        validate_data_loaders(args.data_root_dir)
+        print('Validating sample dataloaders')
+        validate_data_loaders(args.train_data_root_dir)
 
 
 if __name__ == '__main__':
@@ -601,17 +627,17 @@ if __name__ == '__main__':
                         help='Apply augmentation and distractions to a file',
                         default=False)
     parser.add_argument('--gen_aug_plan', action='store_true',
-                        help='Gen augmentation plan',
+                        help='Generate augmentation and distractions plan',
                         default=False)
     parser.add_argument('--apply_aug_to_all', action='store_true',
-                        help='Apply augmentation and distractions to all samples',
+                        help='Apply augmentation and distractions to all samples, per plan',
                         default=False)
-    parser.add_argument('--data_root_dir', help='Root dir for DFDC train dataset',
-                        default=get_default_train_data_path())
-    parser.add_argument('--data_backup_dir', help='Root dir for DFDC train dataset',
+    parser.add_argument('--train_data_root_dir', help='Root dir for DFDC train dataset',
+                        default=get_train_data_path())
+    parser.add_argument('--train_data_backup_dir', help='Root dir for backup DFDC train dataset',
                         default=get_backup_train_data_path())
     parser.add_argument('--restore_aug_files', action='store_true',
-                        help='Restore augmented files',
+                        help='Restore all augmented files',
                         default=False)
     parser.add_argument('--restore_bad_aug_files', action='store_true',
                         help='Restore bad augmented files',
@@ -620,27 +646,22 @@ if __name__ == '__main__':
                         help='Compress all videos (adaptive compression to maintain approx median filesize)',
                         default=False)
     parser.add_argument('--extract_faces', action='store_true',
-                        help='Detect faces from videos and store json for each face locations',
+                        help='Detect faces from videos and store json for each face location',
                         default=False)
-
-    parser.add_argument('--recreate_fboxes_video', action='store_true',
+    parser.add_argument('--create_fboxes_video', action='store_true',
                         help='Use json file to overlay box on faces',
                         default=False)
-
     parser.add_argument('--validate_aug_video', action='store_true',
-                        help='Use ffmpeg to check if augmented video is valid',
+                        help='Use ffmpeg to check if augmented videos are valid',
                         default=False)
-
     parser.add_argument('--crop_faces', action='store_true',
-                        help='Use ffmpeg to check if augmented video is valid',
+                        help='Crop faces and generate image from videos, using json files',
                         default=False)
-
     parser.add_argument('--consol_train_labels', action='store_true',
                         help='Consolidate all training samples with their labels',
                         default=False)
-
     parser.add_argument('--validate_data_loaders', action='store_true',
-                        help='Create data loaders and validate its functionality',
+                        help='Create sample data loaders and validate its functionality',
                         default=False)
 
     args = parser.parse_args()

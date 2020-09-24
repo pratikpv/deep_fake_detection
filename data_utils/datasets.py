@@ -8,11 +8,11 @@ from utils import *
 
 
 class DFDCDataset(Dataset):
-    def __init__(self, data, mode='train', crops_dir=get_crop_faces_data_path()):
+    def __init__(self, data, mode='train'):
         super().__init__()
         self.data = data
         self.mode = mode
-        self.crops_dir = crops_dir
+        self.crops_dir = get_train_crop_faces_data_path()
 
         self.lookup_table = self._generate_loopup_table(self.mode)
 

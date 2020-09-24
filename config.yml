@@ -1,23 +1,27 @@
+assets: 'assets'
+data_path:
+  train: '/home/therock/data2/data_workset/dfdc/train/'
+  valid: '/home/therock/data2/data_workset/dfdc/valid/'
+  test: '/home/therock/data2/data_workset/dfdc/test/'
+  train_backup: '/home/therock/data5/dataset_master/deepfake_dfdc/train/'
+  train_labels_csv_filename: 'train_labels.csv'
+  valid_labels_csv_filename: 'labels.csv'
+  test_labels_csv_filename: 'labels.csv'
+data_augmentation:
+  plan_pkl_filename: 'data_augmentation_plan.pkl'
+  plan_txt_filename: 'data_augmentation_plan.txt'
+  metadata: 'aug_metadata'
+  compression_csv_filename: 'data_compression.csv'
+  integrity_csv_filename: 'data_integrity.csv'
+features:
+  train_json_faces: '/home/therock/data2/data_workset/dfdc/json_faces/train/'
+  valid_json_faces: '/home/therock/data2/data_workset/dfdc/json_faces/valid/'
+  test_json_faces: '/home/therock/data2/data_workset/dfdc/json_faces/test/'
+  train_crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/train/'
+  valid_crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/valid/'
+  test_crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/test/'
+  face_location_video_data_path: 'face_location_video_data'
 logging:
   root_log_dir: logs
 printing:
   line_len: 80
-assets: 'assets'
-data_path:
-  train: '/home/therock/data2/data_workset/dfdc/train/'
-  test: '/home/therock/data2/data_workset/dfdc/test/'
-  validation: '/home/therock/data2/data_workset/dfdc/validation/'
-  train_backup: '/home/therock/data5/dataset_master/deepfake_dfdc/train/'
-  train_labels_csv: 'train_labels.csv'
-  valid_labels_csv: 'labels.csv'
-  test_labels_csv: 'labels.csv'
-data_augmentation:
-  plan_pkl_file: 'data_augmentation_plan.pkl'
-  plan_txt_file: 'data_augmentation_plan.txt'
-  metadata_folder: 'aug_metadata'
-  compression_csv: 'data_compression.csv'
-  integrity_csv: 'data_integrity.csv'
-features:
-  face_location_data_path: 'face_location_data'
-  face_location_video_data_path: 'face_location_video_data'
-  crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/'
