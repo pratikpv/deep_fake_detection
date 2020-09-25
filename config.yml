@@ -24,6 +24,8 @@ features:
   valid_faces_cnn: '/home/therock/data2/data_workset/dfdc/faces_cnn/valid/'
   test_faces_cnn: '/home/therock/data2/data_workset/dfdc/faces_cnn/test/'
   face_location_video_data_path: 'face_location_video_data'
+cnn_encoder:
+  default: 'tf_efficientnet_b0_ns'
 training:
   sample_size: 0.20
 logging:

@@ -118,22 +118,27 @@ def get_test_crop_faces_data_path():
 
 def get_train_faces_cnn_features_data_path():
     config = load_config()
-    return config['features']['train_faces_cnn']
+    return os.path.join(config['features']['train_faces_cnn'], get_default_cnn_encoder_name())
 
 
 def get_valid_faces_cnn_features_data_path():
     config = load_config()
-    return config['features']['valid_faces_cnn']
+    return os.path.join(config['features']['valid_faces_cnn'], get_default_cnn_encoder_name())
 
 
 def get_test_faces_cnn_features_data_path():
     config = load_config()
-    return config['features']['test_faces_cnn']
+    return os.path.join(config['features']['test_faces_cnn'], get_default_cnn_encoder_name())
 
 
 def get_faces_loc_video_path():
     config = load_config()
     return os.path.join(get_assets_path(), config['features']['face_location_video_data_path'])
+
+
+def get_default_cnn_encoder_name():
+    config = load_config()
+    return config['cnn_encoder']['default']
 
 
 def get_log_dir_name(create_logdir=True):
