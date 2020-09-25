@@ -599,9 +599,9 @@ def main():
         adaptive_video_compress_batch(args.train_data_root_dir, get_data_aug_plan_pkl_filename())
 
     if args.extract_faces:
-        # print('Detecting faces in training videos and saving in json files')
-        # input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
-        # extract_faces_batch(input_videofiles, get_train_json_faces_data_path())
+        print('Detecting faces in training videos and saving in json files')
+        input_videofiles = get_all_training_video_filepaths(args.train_data_root_dir)
+        extract_faces_batch(input_videofiles, get_train_json_faces_data_path())
         print('Detecting faces in validation videos and saving in json files')
         input_videofiles = get_all_validation_video_filepaths(get_validation_data_path())
         extract_faces_batch(input_videofiles, get_valid_json_faces_data_path())
