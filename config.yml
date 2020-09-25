@@ -20,7 +20,12 @@ features:
   train_crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/train/'
   valid_crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/valid/'
   test_crop_faces: '/home/therock/data2/data_workset/dfdc/crop_faces/test/'
+  train_faces_cnn: '/home/therock/data2/data_workset/dfdc/faces_cnn/train/'
+  valid_faces_cnn: '/home/therock/data2/data_workset/dfdc/faces_cnn/valid/'
+  test_faces_cnn: '/home/therock/data2/data_workset/dfdc/faces_cnn/test/'
   face_location_video_data_path: 'face_location_video_data'
+training:
+  sample_size: 0.20
 logging:
   root_log_dir: logs
 printing:

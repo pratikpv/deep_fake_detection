@@ -88,32 +88,47 @@ def get_video_integrity_data_path():
 
 def get_train_json_faces_data_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['train_json_faces'])
+    return config['features']['train_json_faces']
 
 
 def get_valid_json_faces_data_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['valid_json_faces'])
+    return config['features']['valid_json_faces']
 
 
 def get_test_json_faces_data_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['test_json_faces'])
+    return config['features']['test_json_faces']
 
 
 def get_train_crop_faces_data_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['train_crop_faces'])
+    return config['features']['train_crop_faces']
 
 
 def get_valid_crop_faces_data_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['valid_crop_faces'])
+    return config['features']['valid_crop_faces']
 
 
 def get_test_crop_faces_data_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['test_crop_faces'])
+    return config['features']['test_crop_faces']
+
+
+def get_train_faces_cnn_features_data_path():
+    config = load_config()
+    return config['features']['train_faces_cnn']
+
+
+def get_valid_faces_cnn_features_data_path():
+    config = load_config()
+    return config['features']['valid_faces_cnn']
+
+
+def get_test_faces_cnn_features_data_path():
+    config = load_config()
+    return config['features']['test_faces_cnn']
 
 
 def get_faces_loc_video_path():
@@ -128,6 +143,11 @@ def get_log_dir_name(create_logdir=True):
     if create_logdir:
         os.makedirs(log_dir, exist_ok=True)
     return log_dir
+
+
+def get_training_sample_size():
+    config = load_config()
+    return float(config['training']['sample_size'])
 
 
 def print_line(print_len=None):
