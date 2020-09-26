@@ -5,20 +5,31 @@ from torch.utils.data import Dataset
 import numpy as np
 from data_utils.utils import *
 from utils import *
+from PIL import Image
 
 
 class DFDCDataset(Dataset):
-    def __init__(self, data, mode='train'):
+    def __init__(self, data, mode=None, transform=None, max_num_frames=10, frame_dim=256, device=None):
         super().__init__()
         self.data = data
         self.mode = mode
-        self.crops_dir = get_train_crop_faces_data_path()
+        if self.mode == 'train':
+            self.crops_dir = get_train_crop_faces_data_path()
+            self.labels_csv = get_train_labels_csv_filepath()
+        elif self.mode == 'valid':
+            self.crops_dir = get_valid_crop_faces_data_path()
+            self.labels_csv = get_valid_labels_csv_filepath()
+        elif self.mode == 'test':
+            self.crops_dir = get_test_crop_faces_data_path()
+            self.labels_csv = get_test_labels_csv_filepath()
+        else:
+            raise Exception("Invalid mode in DFDCDataset passed")
 
-        self.lookup_table = self._generate_loopup_table(self.mode)
-
+        self.lookup_table = self._generate_loopup_table()
         self.data_len = len(self.data)
-
-        print(f'in init len = {self.data_len}')
+        self.transform = transform
+        self.max_num_frames = max_num_frames
+        self.frame_dim = frame_dim
 
     def __len__(self) -> int:
         return self.data_len
@@ -28,21 +39,37 @@ class DFDCDataset(Dataset):
         video_filename = os.path.basename(video_filepath)
         video_id = os.path.splitext(video_filename)[0]
         crops_id_path = os.path.join(self.crops_dir, video_id)
-        frames = glob(crops_id_path + '/*_0.png')
-        frames = sorted(frames, key=alpha_sort_keys)
-        item = (video_id, frames, self.lookup_table[video_filename])
+        debug = False
+        if not debug:
+            frame_names = glob(crops_id_path + '/*_0.png')
+            num_of_frames = len(frame_names)
+            if num_of_frames == 0:
+                return None
+            frame_names = sorted(frame_names, key=alpha_sort_keys)
+            if num_of_frames > self.max_num_frames:
+                frame_names = frame_names[0:self.max_num_frames]
+            frames = list()
+            for f in frame_names:
+                image = Image.open(f)
+                if self.transform is not None:
+                    f = self.transform(image)
+                    # print(f.shape)
+                frames.append(f)
 
+            if num_of_frames < self.max_num_frames:
+                delta = self.max_num_frames - num_of_frames
+                for f in range(delta):
+                    frames.append(torch.zeros_like(frames[0]))
+        else:
+            frames = list()
+            for f in range(self.max_num_frames):
+                frames.append(torch.ones(3, self.frame_dim, self.frame_dim) * (random.randint(1, 5)))
+
+        frames = torch.stack(frames, dim=0)
+        label = torch.tensor(self.lookup_table[video_filename])  # , dtype=torch.LongTensor)
+        item = (video_id, frames, label)
         return item
 
-    def _generate_loopup_table(self, mode):
-        if mode == 'train':
-            labels_csv = get_train_labels_csv_filepath()
-        elif mode == 'valid':
-            labels_csv = get_valid_labels_csv_filepath()
-        elif mode == 'test':
-            labels_csv = get_test_labels_csv_filepath()
-        else:
-            raise Exception("Invalid mode in DFDCDataLoader")
-        df = pd.read_csv(labels_csv, squeeze=True, index_col=0)
-        df_dict = df.to_dict()
-        return df_dict
+    def _generate_loopup_table(self):
+        df = pd.read_csv(self.labels_csv, squeeze=True, index_col=0)
+        return df.to_dict()
