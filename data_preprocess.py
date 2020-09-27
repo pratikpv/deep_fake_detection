@@ -19,6 +19,7 @@ import argparse
 import numpy as np
 from data_utils.datasets import DFDCDataset
 from torch.utils.data import DataLoader
+from pathlib import Path
 
 
 def test_data_augmentation(input_file, output_folder):
@@ -32,7 +33,8 @@ def test_data_augmentation(input_file, output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
     augmentation_methods = augmentation.get_supported_augmentation_methods()
-    augmentation_methods.remove('noise')
+    if 'noise' in augmentation_methods:
+        augmentation_methods.remove('noise')
     augmentation_param = [augmentation.get_augmentation_setting_by_type(m) for m in augmentation_methods]
     noise_methods = augmentation.get_supported_noise_types()
     noise_methods_param = [augmentation.get_noise_param_setting(m) for m in noise_methods]
@@ -54,7 +56,8 @@ def test_data_augmentation(input_file, output_folder):
             outfile = os.path.join(output_folder, suffix + '.mp4')
             jobs.append(pool.apply_async(augmentation.apply_augmentation_to_videofile,
                                          (input_file, outfile,),
-                                         dict(augmentation=aug_func, augmentation_param=aug_param)
+                                         dict(augmentation=aug_func, augmentation_param=aug_param,
+                                              save_intermdt_files=True)
                                          )
                         )
 
@@ -85,7 +88,8 @@ def test_data_distraction(input_file, output_folder):
             outfile = os.path.join(output_folder, out_id + '_' + distract_func + '.mp4')
             jobs.append(pool.apply_async(distractions.apply_distraction_to_videofile,
                                          (input_file, outfile,),
-                                         dict(distraction=distract_func, distraction_param=distract_param)
+                                         dict(distraction=distract_func, distraction_param=distract_param,
+                                              save_intermdt_files=True)
                                          ))
 
         for job in tqdm(jobs, desc="Applying distraction"):
@@ -102,7 +106,7 @@ def locate_faces_batch(input_root, output_root):
         results = []
         for input_filepath in input_filepath_list:
             output_filepath = os.path.join(output_root, os.path.basename(input_filepath))
-            jobs.append(pool.apply_async(augmentation.locate_face_in_videofile,
+            jobs.append(pool.apply_async(fd.locate_face_in_videofile,
                                          (input_filepath, output_filepath,),
                                          )
                         )
@@ -565,16 +569,23 @@ def main():
         print('Applying augmentation and distraction to sample file')
         sample_test_file = os.path.join('dfdc_train_part_30', 'ajxcpxpmof.mp4')
         sample_test_file = os.path.join(args.train_data_root_dir, sample_test_file)
-        print(f'sample file: {sample_test_file}')
+        out_root = Path(args.train_data_root_dir).parent
+        aug_output_folder = os.path.join(out_root, 'sample_augmentation')
+        face_locate_out_folder = os.path.join(out_root, 'sample_augmentation_faces')
 
-        aug_output_folder = os.path.join(args.train_data_root_dir, 'test_augmentation')
-        face_locate_out_folder = os.path.join(args.train_data_root_dir, 'test_augmentation_locate')
+        print(f'aug_output_folder: {aug_output_folder}')
+        print(f'face_locate_out_folder: {face_locate_out_folder}')
+        print(f'Sample file: {sample_test_file}')
+
+        os.makedirs(aug_output_folder, exist_ok=True)
+        os.makedirs(face_locate_out_folder, exist_ok=True)
+        shutil.copy(sample_test_file, os.path.join(aug_output_folder, os.path.basename(sample_test_file)))
 
         test_data_augmentation(sample_test_file, aug_output_folder)
         test_data_distraction(sample_test_file, aug_output_folder)
         locate_faces_batch(aug_output_folder, face_locate_out_folder)
         print(f'generating poster for samples')
-        generate_poster(sample_test_file, aug_output_folder)
+        generate_poster(sample_test_file, aug_output_folder, frames_count=5)
 
     if args.gen_aug_plan:
         print('Generating augmentation plan')
