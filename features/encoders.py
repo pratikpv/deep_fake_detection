@@ -5,12 +5,12 @@ import torch.nn as nn
 
 encoder_params = {
     "tf_efficientnet_b0_ns": {
-        "features": 1536,
+        "flat_features_dim": 62720,
         "imsize": 224,
         "init_op": partial(tf_efficientnet_b0_ns, pretrained=True, drop_path_rate=0.2)
     },
     "tf_efficientnet_b7_ns": {
-        "features": 2560,
+        "flat_features_dim": 2560,
         "imsize": 600,
         "init_op": partial(tf_efficientnet_b7_ns, pretrained=True, drop_path_rate=0.2)
     }
