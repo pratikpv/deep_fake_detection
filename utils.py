@@ -1,7 +1,5 @@
 import torch
 import sys
-from utils import *
-from data_utils.utils import *
 import cv2
 import yaml
 from datetime import datetime
@@ -59,6 +57,11 @@ def get_valid_labels_csv_filepath():
 def get_test_labels_csv_filepath():
     config = load_config()
     return os.path.join(get_test_data_path(), config['data_path']['test_labels_csv_filename'])
+
+
+def get_processed_train_data_filepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['processed_train_filename'])
 
 
 def get_data_aug_plan_pkl_filename():

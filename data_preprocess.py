@@ -662,6 +662,10 @@ def main():
         print('Validating sample dataloaders')
         validate_data_loaders(args.train_data_root_dir)
 
+    if args.gen_proc_train_pkl:
+        print('Generating pickle file for processed training samples')
+        generate_processed_training_video_filepaths(args.train_data_root_dir)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -706,7 +710,9 @@ if __name__ == '__main__':
     parser.add_argument('--validate_data_loaders', action='store_true',
                         help='Create sample data loaders and validate its functionality',
                         default=False)
-
+    parser.add_argument('--gen_proc_train_pkl', action='store_true',
+                        help='Generate pickle file for processed training samples',
+                        default=False)
     args = parser.parse_args()
     print(args)
     create_assets_placeholder()

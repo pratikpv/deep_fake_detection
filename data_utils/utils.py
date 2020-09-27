@@ -9,6 +9,8 @@ from utils import *
 import shutil
 from tqdm import tqdm
 import pandas as pd
+from utils import *
+import pickle
 
 random_setting = '$RANDOM$'
 
@@ -154,7 +156,7 @@ def get_training_reals_and_fakes(root_dir):
     return originals, fakes
 
 
-def get_all_training_video_filepaths(root_dir):
+def get_all_training_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
     video_filepaths = []
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
         dir = Path(json_path).parent
@@ -163,7 +165,37 @@ def get_all_training_video_filepaths(root_dir):
         for k, v in metadata.items():
             full_path = os.path.join(dir, k)
             video_filepaths.append(full_path)
+
+    if match_proc:
+        video_filepaths_ = video_filepaths.copy()
+        crops_path = get_train_crop_faces_data_path()
+        for v in tqdm(video_filepaths_):
+            crops_id_path = os.path.join(crops_path, os.path.splitext(os.path.basename(v))[0])
+            if not os.path.isdir(crops_id_path):
+                video_filepaths.remove(v)
+                continue
+            #print(crops_id_path)
+            frame_names = glob(crops_id_path + '/*_0.png')
+            #print(len(frame_names))
+            if len(frame_names) < min_num_frames:
+                video_filepaths.remove(v)
     return video_filepaths
+
+
+def generate_processed_training_video_filepaths(root_dir):
+    files = get_all_training_video_filepaths(root_dir, match_proc=True)
+    filename = get_processed_train_data_filepath()
+    with open(filename, 'wb') as f:
+        pickle.dump(files, f)
+
+
+def get_processed_training_video_filepaths(root_dir):
+    filename = get_processed_train_data_filepath()
+    print(filename)
+    with open(filename, 'rb') as f:
+        files = pickle.load(f)
+
+    return files
 
 
 def get_all_validation_video_filepaths(root_dir):

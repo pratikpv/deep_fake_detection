@@ -7,6 +7,7 @@ data_path:
   train_labels_csv_filename: 'train_labels.csv'
   valid_labels_csv_filename: 'labels.csv'
   test_labels_csv_filename: 'labels.csv'
+  processed_train_filename: 'processed_train_samples.pkl'
 data_augmentation:
   plan_pkl_filename: 'data_augmentation_plan.pkl'
   plan_txt_filename: 'data_augmentation_plan.txt'
