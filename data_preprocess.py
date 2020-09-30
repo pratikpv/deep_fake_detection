@@ -662,9 +662,11 @@ def main():
         print('Validating sample dataloaders')
         validate_data_loaders(args.train_data_root_dir)
 
-    if args.gen_proc_train_pkl:
+    if args.gen_proc_pkl:
         print('Generating pickle file for processed training samples')
         generate_processed_training_video_filepaths(args.train_data_root_dir)
+        print('Generating pickle file for processed validation samples')
+        generate_processed_validation_video_filepaths(get_validation_data_path())
 
 
 if __name__ == '__main__':
@@ -710,8 +712,8 @@ if __name__ == '__main__':
     parser.add_argument('--validate_data_loaders', action='store_true',
                         help='Create sample data loaders and validate its functionality',
                         default=False)
-    parser.add_argument('--gen_proc_train_pkl', action='store_true',
-                        help='Generate pickle file for processed training samples',
+    parser.add_argument('--gen_proc_pkl', action='store_true',
+                        help='Generate pickle file for processed training and validation samples',
                         default=False)
     args = parser.parse_args()
     print(args)
