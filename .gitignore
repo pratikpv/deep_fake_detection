@@ -5,3 +5,5 @@ __pycache__/
 test_notebook.ipynb
 readme_todo.txt
 logs/
+external/
+assets/
