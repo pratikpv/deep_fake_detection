@@ -52,9 +52,9 @@ class DFDCDataset(Dataset):
             for f in frame_names:
                 image = Image.open(f)
                 if self.transform is not None:
-                    f = self.transform(image)
+                    image = self.transform(image)
                     # print(f.shape)
-                frames.append(f)
+                frames.append(image)
 
             if num_of_frames < self.max_num_frames:
                 delta = self.max_num_frames - num_of_frames
@@ -66,7 +66,7 @@ class DFDCDataset(Dataset):
                 frames.append(torch.ones(3, self.frame_dim, self.frame_dim) * (random.randint(1, 5)))
 
         frames = torch.stack(frames, dim=0)
-        label = torch.tensor(self.lookup_table[video_filename])  # , dtype=torch.LongTensor)
+        label = torch.tensor(self.lookup_table[video_filename], dtype=torch.long)
         item = (video_id, frames, label)
         return item
 
