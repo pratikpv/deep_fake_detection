@@ -17,7 +17,7 @@ import torch.nn.functional as F
 
 
 class DeepFakeDetectModel_2(nn.Module):
-    def __init__(self, frame_dim=None, encoder_name=None, max_num_frames=None, lstm_hidden_dim=256, lstm_num_layers=2,
+    def __init__(self, frame_dim=None, encoder_name=None, max_num_frames=None, lstm_hidden_dim=1024, lstm_num_layers=1,
                  lstm_bidirectional=False, lstm_dropout=0):
         super().__init__()
         self.frame_dim = frame_dim
@@ -38,7 +38,9 @@ class DeepFakeDetectModel_2(nn.Module):
                            dropout=self.lstm_dropout, batch_first=True)
         # print(f'Done creating LSTM')
         self.classifier = nn.Sequential(
-            nn.Linear(self.lstm_hidden_dim * self.max_num_frames, 1),
+            nn.Linear(self.lstm_hidden_dim * self.max_num_frames, 128),
+            nn.ReLU(),
+            nn.Linear(128, 2),
         )
 
     def forward(self, x):
