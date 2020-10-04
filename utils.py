@@ -64,6 +64,11 @@ def get_processed_train_data_filepath():
     return os.path.join(get_assets_path(), config['data_path']['processed_train_filename'])
 
 
+def get_processed_validation_data_filepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['processed_valid_filename'])
+
+
 def get_data_aug_plan_pkl_filename():
     config = load_config()
     return os.path.join(config['assets'], config['data_augmentation']['plan_pkl_filename'])
@@ -155,13 +160,31 @@ def get_log_dir_name(create_logdir=True):
 
 def get_training_sample_size():
     config = load_config()
-    return float(config['training']['sample_size'])
+    return float(config['training']['train_size'])
 
+
+def get_valid_sample_size():
+    config = load_config()
+    return float(config['training']['valid_size'])
+
+
+def get_checkpoint_root_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['training']['checkpoint_path'])
+
+
+def get_training_params():
+    config = load_config()
+    return config['training']['params']
+
+def get_log_params():
+    config = load_config()
+    return config['logging']
 
 def print_line(print_len=None):
     if print_len is None:
         config = load_config()
-    print('-' * config['printing']['line_len'])
+    print('-' * config['logging']['line_len'])
 
 
 def print_banner():

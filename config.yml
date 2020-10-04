@@ -8,6 +8,7 @@ data_path:
   valid_labels_csv_filename: 'labels.csv'
   test_labels_csv_filename: 'labels.csv'
   processed_train_filename: 'processed_train_samples.pkl'
+  processed_valid_filename: 'processed_valid_samples.pkl'
 data_augmentation:
   plan_pkl_filename: 'data_augmentation_plan.pkl'
   plan_txt_filename: 'data_augmentation_plan.txt'
@@ -28,8 +29,25 @@ features:
 cnn_encoder:
   default: 'tf_efficientnet_b0_ns'
 training:
-  sample_size: 0.20
+  train_size: 0.20
+  valid_size: 1
+  checkpoint_path: 'checkpoints'
+  params:
+    model_name: 'DeepFakeDetectModel_3'
+    max_num_frames: 1
+    batch_size: 1024
+    epochs: 50
+    learning_rate: 0.001
 logging:
   root_log_dir: logs
-printing:
   line_len: 80
+  model_info_log: 'model_info_and_results.log'
+  model_loss_info_log: 'model_losses.log'
+  model_acc_info_log: 'model_acc.log'
+  model_conf_matrix_csv: 'confusion_matrix.csv'
+  model_conf_matrix_png: 'confusion_matrix.png'
+  model_conf_matrix_normalized_csv: 'confusion_matrix_normalized.csv'
+  model_conf_matrix_normalized_png: 'confusion_matrix_normalized.png'
+  model_accuracy_png: 'model_accuracy.png'
+  model_loss_png: 'model_loss.png'
+  all_samples_pred_csv: 'all_samples_pred.csv'
