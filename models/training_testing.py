@@ -5,6 +5,7 @@ from data_utils.utils import *
 from models.DeepFakeDetectModel_1 import *
 from models.DeepFakeDetectModel_2 import *
 from models.DeepFakeDetectModel_3 import *
+from models.DeepFakeDetectModel_4 import *
 from data_utils.datasets import DFDCDataset
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -17,7 +18,6 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from models.checkpoint import *
 from quantification.utils import *
-
 import cv2
 
 cv2.setNumThreads(0)
@@ -72,14 +72,11 @@ def global_minibatch_number(epoch, batch_id, batch_size):
 
 
 def my_collate(batch):
-    # print(f'entering my_collate')
     batch = list(filter(lambda x: x is not None, batch))
     # for i, b in enumerate(batch):
     #    print_batch_item(i, b)
-    # v_ids, frames, labels = batch
 
     batch = tuple(zip(*batch))
-    # batch = torch.utils.data.dataloader.default_collate(batch)
     return batch
 
 
@@ -88,7 +85,6 @@ def train_model(train_method='resume'):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     model_params = get_training_params()
-    # device = torch.device("cpu")
 
     # train_data = get_all_training_video_filepaths(get_train_data_path())
     # valid_data = get_all_validation_video_filepaths(get_validation_data_path())
@@ -142,7 +138,7 @@ def train_model(train_method='resume'):
                                 max_num_frames=model_params['max_num_frames'],
                                 frame_dim=imsize)
 
-    num_workers = multiprocessing.cpu_count() - 2
+    # num_workers = multiprocessing.cpu_count() - 2
     num_workers = 0
 
     train_loader = DataLoader(train_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
@@ -150,20 +146,19 @@ def train_model(train_method='resume'):
     valid_loader = DataLoader(valid_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
                               collate_fn=my_collate)
     print(f'Batch_size {train_loader.batch_size}')
-    if model_params['model_name'] == 'DeepFakeDetectModel_3':
-        model = DeepFakeDetectModel_3(frame_dim=imsize).to(device)
-    elif model_params['model_name'] == 'DeepFakeDetectModel_2':
+    if model_params['model_name'] == 'DeepFakeDetectModel_2':
         model = DeepFakeDetectModel_2(frame_dim=imsize, max_num_frames=model_params['max_num_frames'],
                                       encoder_name=encoder_name).to(device)
+    elif model_params['model_name'] == 'DeepFakeDetectModel_3':
+        model = DeepFakeDetectModel_3(frame_dim=imsize).to(device)
+    elif model_params['model_name'] == 'DeepFakeDetectModel_4':
+        model = DeepFakeDetectModel_4(frame_dim=imsize, encoder_name=encoder_name).to(device)
     else:
         raise Exception("Unknown model name passed")
 
-    # criterion = nn.BCEWithLogitsLoss().to(device)
-    # criterion = nn.BCELoss().to(device)
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=model_params['learning_rate'])
 
-    #model_params['model_name'] = type(model).__name__
     print(f'Train data len {train_data_len}')
     print(f'Valid data len {valid_data_len}')
     start_epoch = 0
@@ -187,7 +182,6 @@ def train_model(train_method='resume'):
 
     for e in tqdm_train_obj:
 
-        # print(f'\nmain epoch : {e}')
         if e < start_epoch:
             continue
 
@@ -202,12 +196,12 @@ def train_model(train_method='resume'):
         model_train_accuracies.append(t_epoch_accuracy)
         model_train_losses.append(t_epoch_loss)
 
-        """
+
         tqdm_descr = tqdm_train_descr_format.format(np.mean(model_train_accuracies), np.mean(model_train_losses),
                                                     np.mean(model_valid_accuracies), np.mean(model_valid_losses))
         tqdm_train_obj.set_description(tqdm_descr)
         tqdm_train_obj.update()
-        """
+
         train_writer.add_scalar('Training: loss per epoch', t_epoch_loss, e)
         train_writer.add_scalar('Training: accuracy per epoch', t_epoch_accuracy, e)
 
@@ -241,9 +235,6 @@ def train_model(train_method='resume'):
 
 def get_predictions(output):
     return torch.argmax(output, dim=1)
-    # return np.where(output.to('cpu').detach().numpy() < 0.5, 0.0, 1.0)
-    # return torch.sigmoid(output).to('cpu').detach().numpy().round()
-    # return output.to('cpu').detach().numpy().round()
 
 
 def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loader=None, batch_size=None, device=None,
@@ -271,24 +262,17 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
         frames_ = samples[1]
         frames = torch.stack(frames_).to(device)
         # print(f'{idx} | batch_size {batch_size} | frames:{frames.shape}')
-        # labels = torch.stack(samples[2]).type(torch.float).to(device)#.unsqueeze(1)
         labels = torch.stack(samples[2]).to(device)
 
         output = model(frames)
 
-        #print(f'train out= {output}')
+        # print(f'train out= {output}')
         batch_loss = criterion(output, labels)
         batch_loss_val = batch_loss.item()
-        # print(f' batch_loss  = {batch_loss}')
         batch_loss.backward()
         optimizer.step()
 
-        # output = torch.squeeze(output, dim=1)
-        # labels = torch.squeeze(labels, dim=1)
         predicted = get_predictions(output)
-        # predicted = output.detach().to('cpu').numpy()
-        # labels = labels.detach().to('cpu').numpy()
-        # labels = np.array(labels.to('cpu').detach())
         batch_corr = (predicted == labels).sum().item()
 
         # print(f'Train Predictions = {predicted}')
@@ -313,7 +297,6 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
 
     mean_epoch_acc = np.mean(accuracies)
     mean_epoch_loss = np.mean(losses)
-    # print(f'manual mean acc = {total_correct * 100 / total_samples},  mean api acc = {mean_epoch_acc}')
 
     return model, mean_epoch_acc, mean_epoch_loss
 
@@ -347,19 +330,14 @@ def valid_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
             all_video_filenames.extend(samples[0])
             frames_ = samples[1]
             frames = torch.stack(frames_).to(device)
-            # labels = torch.stack(samples[2]).type(torch.float).to(device)#.unsqueeze(1)
             labels = torch.stack(samples[2]).to(device)
 
             output = model(frames)
-            # output = torch.squeeze(output, dim=1)
-            #print(f'valid out= {output}')
+            # print(f'valid out= {output}')
             batch_loss = criterion(output, labels)
             batch_loss_val = batch_loss.item()
 
-            # output = torch.squeeze(output, dim=1)
-            # labels = torch.squeeze(labels, dim=1)
             predicted = get_predictions(output)
-            # labels = labels.detach().to('cpu').numpy()
             batch_corr = (predicted == labels).sum().item()
             all_predicted_labels.extend(predicted.tolist())
             all_ground_truth_labels.extend(labels.tolist())
@@ -384,6 +362,5 @@ def valid_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
 
         mean_epoch_acc = np.mean(accuracies)
         mean_epoch_loss = np.mean(losses)
-        # print(f'manual mean acc = {total_correct * 100 / total_samples},  mean api acc = {mean_epoch_acc}')
 
     return mean_epoch_acc, mean_epoch_loss, all_predicted_labels, all_ground_truth_labels, all_video_filenames
