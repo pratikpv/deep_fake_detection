@@ -5,6 +5,7 @@ import yaml
 from datetime import datetime
 import os
 from pprint import pprint
+import shutil
 
 
 def load_config(config_file='config.yml'):
@@ -17,6 +18,10 @@ def print_config(config=None):
     if config is None:
         config = load_config()
     pprint(config)
+
+
+def copy_config(config_file='config.yml', dest=None):
+    shutil.copy(config_file, dest)
 
 
 def get_assets_path():
@@ -177,9 +182,11 @@ def get_training_params():
     config = load_config()
     return config['training']['params']
 
+
 def get_log_params():
     config = load_config()
     return config['logging']
+
 
 def print_line(print_len=None):
     if print_len is None:

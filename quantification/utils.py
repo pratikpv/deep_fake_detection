@@ -135,4 +135,6 @@ def save_model_results_to_log(model=None, model_params=None,
 
     # save model as pytorch state dict
     torch.save(model.state_dict(), model_save_path)
+
+    copy_config(dest=model_log_dir)
     sys.stdout.flush()
