@@ -113,10 +113,17 @@ augmentation_mapping = {
 
 
 def get_supported_noise_types():
+    """
+    :return: All supported noise types
+    """
     return ['gaussian', 'speckle', 's&p', 'pepper', 'salt', 'poisson', 'localvar']
 
 
 def get_random_noise_type():
+    """
+
+    :return: get random noise type from supported noise types
+    """
     return random.choice(get_supported_noise_types())
 
 
@@ -149,6 +156,11 @@ def get_random_rescale_setting():
 
 
 def get_augmentation_setting_by_type(type=None):
+    """
+    Generate random augmentation param for the augmentation type given
+    :param type: augmentation type
+    :return: random augmentation param for the augmentation passed
+    """
     noise_list = get_supported_noise_types()
     if type in noise_list:
         return None
@@ -171,6 +183,13 @@ def get_augmentation_setting_by_type(type=None):
 
 
 def get_random_augmentation(avoid_noise=False):
+    """
+    Get a random augmentation method and its parameter
+
+    :param avoid_noise: mode 'noise' method if this is set to True
+    :return: augmentation and augmentation_params
+    """
+
     supported_augmentation_methods = get_supported_augmentation_methods()
     if avoid_noise:
         supported_augmentation_methods.remove('noise')
@@ -179,6 +198,18 @@ def get_random_augmentation(avoid_noise=False):
 
 
 def prepare_augmentation_param(augmentation, augmentation_param, frame_num, res):
+    """
+    prepare augmentation params before applying the augmentation
+    if 'random_setting' is set generate actual random values
+
+    some random values are set for frame_num 0 only.
+
+    :param augmentation: the method of augmentation
+    :param augmentation_param: params
+    :param frame_num: update param based on the frame num
+    :param res: resolution of the frame
+    :return: updated augmentation_param
+    """
     if augmentation == 'noise':
         if frame_num == 0:
             if augmentation_param['noise_type'] == random_setting:
@@ -214,6 +245,16 @@ def prepare_augmentation_param(augmentation, augmentation_param, frame_num, res)
 
 def apply_augmentation_to_videofile(input_video_filename, output_video_filename, augmentation=None,
                                     augmentation_param=None, save_intermdt_files=False, test_mode=False):
+    """
+    This is main driver API to apply augmentation to the input video
+    :param input_video_filename: input file
+    :param output_video_filename: output file
+    :param augmentation: method of augmentation
+    :param augmentation_param: params
+    :param save_intermdt_files: save each frames as image
+    :param test_mode: Dont process video, just for testing
+    :return: updated augmentation_param for logging
+    """
     # t = time.time()
     list_of_aug = get_supported_augmentation_methods()
     list_of_aug.extend(get_supported_noise_types())
