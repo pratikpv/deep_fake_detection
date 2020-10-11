@@ -174,9 +174,9 @@ def get_all_training_video_filepaths(root_dir, match_proc=False, min_num_frames=
             if not os.path.isdir(crops_id_path):
                 video_filepaths.remove(v)
                 continue
-            #print(crops_id_path)
+            # print(crops_id_path)
             frame_names = glob(crops_id_path + '/*_0.png')
-            #print(len(frame_names))
+            # print(len(frame_names))
             if len(frame_names) < min_num_frames:
                 video_filepaths.remove(v)
     return video_filepaths
@@ -198,7 +198,7 @@ def get_processed_training_video_filepaths():
     return files
 
 
-def get_all_validation_video_filepaths(root_dir,  match_proc=False, min_num_frames=10):
+def get_all_validation_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
     video_filepaths = []
     for f in glob(os.path.join(root_dir, "*.mp4")):
         video_filepaths.append(os.path.join(root_dir, f))
@@ -206,6 +206,26 @@ def get_all_validation_video_filepaths(root_dir,  match_proc=False, min_num_fram
     if match_proc:
         video_filepaths_ = video_filepaths.copy()
         crops_path = get_valid_crop_faces_data_path()
+        for v in tqdm(video_filepaths_):
+            crops_id_path = os.path.join(crops_path, os.path.splitext(os.path.basename(v))[0])
+            if not os.path.isdir(crops_id_path):
+                video_filepaths.remove(v)
+                continue
+            # print(crops_id_path)
+            frame_names = glob(crops_id_path + '/*_0.png')
+            # print(len(frame_names))
+            if len(frame_names) < min_num_frames:
+                video_filepaths.remove(v)
+    return video_filepaths
+
+def get_all_test_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
+    video_filepaths = []
+    for f in glob(os.path.join(root_dir, "*.mp4")):
+        video_filepaths.append(os.path.join(root_dir, f))
+
+    if match_proc:
+        video_filepaths_ = video_filepaths.copy()
+        crops_path = get_test_crop_faces_data_path()
         for v in tqdm(video_filepaths_):
             crops_id_path = os.path.join(crops_path, os.path.splitext(os.path.basename(v))[0])
             if not os.path.isdir(crops_id_path):
@@ -226,6 +246,15 @@ def generate_processed_validation_video_filepaths(root_dir):
         pickle.dump(files, f)
 
 
+def generate_processed_test_video_filepaths(root_dir):
+    print(root_dir)
+    files = get_all_test_video_filepaths(root_dir, match_proc=True)
+    print(f'num of files: {len(files)}')
+    filename = get_processed_test_data_filepath()
+    with open(filename, 'wb') as f:
+        pickle.dump(files, f)
+
+
 def get_processed_validation_video_filepaths():
     filename = get_processed_validation_data_filepath()
     with open(filename, 'rb') as f:
@@ -233,11 +262,13 @@ def get_processed_validation_video_filepaths():
 
     return files
 
-def get_all_test_video_filepaths(root_dir):
-    video_filepaths = []
-    for f in glob(os.path.join(root_dir, "*.mp4")):
-        video_filepaths.append(os.path.join(root_dir, f))
-    return video_filepaths
+
+def get_processed_test_video_filepaths():
+    filename = get_processed_test_data_filepath()
+    with open(filename, 'rb') as f:
+        files = pickle.load(f)
+
+    return files
 
 
 def restore_augmented_files(aug_metadata, src_root, dest_root):

@@ -667,6 +667,8 @@ def main():
         generate_processed_training_video_filepaths(args.train_data_root_dir)
         print('Generating pickle file for processed validation samples')
         generate_processed_validation_video_filepaths(get_validation_data_path())
+        print('Generating pickle file for processed test samples')
+        generate_processed_test_video_filepaths(get_test_data_path())
 
 
 if __name__ == '__main__':

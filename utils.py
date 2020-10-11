@@ -74,6 +74,11 @@ def get_processed_validation_data_filepath():
     return os.path.join(get_assets_path(), config['data_path']['processed_valid_filename'])
 
 
+def get_processed_test_data_filepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['processed_test_filename'])
+
+
 def get_data_aug_plan_pkl_filename():
     config = load_config()
     return os.path.join(config['assets'], config['data_augmentation']['plan_pkl_filename'])
@@ -171,6 +176,11 @@ def get_training_sample_size():
 def get_valid_sample_size():
     config = load_config()
     return float(config['training']['valid_size'])
+
+
+def get_test_sample_size():
+    config = load_config()
+    return float(config['training']['test_size'])
 
 
 def get_checkpoint_root_path():
