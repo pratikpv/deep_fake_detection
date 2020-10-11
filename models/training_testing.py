@@ -19,83 +19,30 @@ from torch.utils.tensorboard import SummaryWriter
 from models.checkpoint import *
 from quantification.utils import *
 import cv2
+from models.utils import *
 
 cv2.setNumThreads(0)
 
 
-def print_batch_item(index, item, all_frames=False, simple=True):
-    if simple:
-        print_line()
-        if item is None:
-            print(f'{index} | None')
-            return
-        else:
-            v_ids, frames, labels = item
-            print(f'{index} | {v_ids} |frames={len(frames)}, shape={frames[0].shape} | {labels}')
-            print_line()
-            print(frames[0])
-            print_line()
+def train_model(train_method=None):
+    if train_method is None:
+        return None
 
-        print_line()
-
-
-    else:
-        print_line()
-        print(f'index={index}')
-        if item is None:
-            print('None data')
-            return
-        v_ids, frames, labels = item
-        print_line()
-        print(f'v_ids={v_ids}')
-        print_line()
-        if all_frames:
-            print(f'frames len = {len(frames)}')
-            for f in frames:
-                print(f'\t{f.shape}')
-        else:
-            print(f'frames len = {len(frames)}, shape = {frames[0].shape}')
-        print_line()
-        print(f'labels = {labels}')
-        print_line()
-
-
-def global_minibatch_number(epoch, batch_id, batch_size):
-    """
-    get global counter of iteration for smooth plotting
-    @param epoch: epoch
-    @param batch_id: the batch number
-    @param batch_size: batch size
-    @return: global counter of iteration
-    """
-    return epoch * batch_size + batch_id
-
-
-def my_collate(batch):
-    batch = list(filter(lambda x: x is not None, batch))
-    # for i, b in enumerate(batch):
-    #    print_batch_item(i, b)
-
-    batch = tuple(zip(*batch))
-    return batch
-
-
-def train_model(train_method='resume'):
     log_dir = get_log_dir_name()
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     model_params = get_training_params()
 
-    # train_data = get_all_training_video_filepaths(get_train_data_path())
-    # valid_data = get_all_validation_video_filepaths(get_validation_data_path())
-    # test_data = get_all_test_video_filepaths(get_test_data_path())
-
-    train_data = get_processed_training_video_filepaths()
-    valid_data = get_processed_validation_video_filepaths()
+    use_processed_data = True
+    if use_processed_data:
+        train_data = get_processed_training_video_filepaths()
+        valid_data = get_processed_validation_video_filepaths()
+    else:
+        train_data = get_all_training_video_filepaths(get_train_data_path())
+        valid_data = get_all_validation_video_filepaths(get_validation_data_path())
 
     train_data_len = len(train_data)
     valid_data_len = len(valid_data)
-    # test_data_len = len(test_data)
 
     sample_random = True
     train_size = get_training_sample_size()
@@ -145,6 +92,7 @@ def train_model(train_method='resume'):
                               shuffle=True, collate_fn=my_collate)
     valid_loader = DataLoader(valid_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
                               collate_fn=my_collate)
+
     print(f'Batch_size {train_loader.batch_size}')
     if model_params['model_name'] == 'DeepFakeDetectModel_2':
         model = DeepFakeDetectModel_2(frame_dim=imsize, max_num_frames=model_params['max_num_frames'],
@@ -196,7 +144,6 @@ def train_model(train_method='resume'):
         model_train_accuracies.append(t_epoch_accuracy)
         model_train_losses.append(t_epoch_loss)
 
-
         tqdm_descr = tqdm_train_descr_format.format(np.mean(model_train_accuracies), np.mean(model_train_losses),
                                                     np.mean(model_valid_accuracies), np.mean(model_valid_losses))
         tqdm_train_obj.set_description(tqdm_descr)
@@ -232,9 +179,7 @@ def train_model(train_method='resume'):
                                       ground_truth=all_ground_truth_labels, sample_names=all_video_filenames,
                                       log_dir=log_dir)
 
-
-def get_predictions(output):
-    return torch.argmax(output, dim=1)
+    return model, model_params, criterion, log_dir
 
 
 def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loader=None, batch_size=None, device=None,
