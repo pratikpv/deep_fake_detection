@@ -3,7 +3,8 @@ from utils import *
 import os
 
 
-def save_checkpoint(epoch=None, model=None, optimizer=None):
+def save_checkpoint(epoch=None, model=None, model_params=None,
+                    optimizer=None, criterion=None, log_dir=None):
     model_class_name = type(model).__name__
     checkpoint_root_path = get_checkpoint_root_path()
     os.makedirs(checkpoint_root_path, exist_ok=True)
@@ -12,6 +13,9 @@ def save_checkpoint(epoch=None, model=None, optimizer=None):
     check_point_dict = {
         'epoch': epoch,
         'model_class_name': model_class_name,
+        'model_params': model_params,
+        'criterion': criterion,
+        'log_dir': log_dir,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
     }
