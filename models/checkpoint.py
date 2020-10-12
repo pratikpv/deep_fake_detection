@@ -6,7 +6,7 @@ import os
 def save_checkpoint(epoch=None, model=None, model_params=None,
                     optimizer=None, criterion=None, log_dir=None):
     model_class_name = type(model).__name__
-    checkpoint_root_path = get_checkpoint_root_path()
+    checkpoint_root_path = log_dir
     os.makedirs(checkpoint_root_path, exist_ok=True)
     check_point_path = os.path.join(checkpoint_root_path, model_class_name + '.chkpt')
 

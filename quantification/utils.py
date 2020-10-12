@@ -14,7 +14,6 @@ def save_model_results_to_log(model=None, model_params=None,
                               losses=None, accuracies=None,
                               predicted=None, ground_truth=None,
                               misc_data=None, sample_names=None, log_dir=None, report_type=None):
-    print(f'Saving model results for {report_type}')
     log_params = get_log_params()
     model_name = model_params['model_name']
     num_of_classes = 2
@@ -130,7 +129,7 @@ def save_model_results_to_log(model=None, model_params=None,
             file.write('-' * log_params['line_len'] + '\n')
 
         if report is not None:
-            file.write( report_type + ' classification report' + '\n')
+            file.write(report_type + ' classification report' + '\n')
             file.write('-' * log_params['line_len'] + '\n')
             file.write(report + '\n')
             file.write('-' * log_params['line_len'] + '\n')
@@ -143,10 +142,6 @@ def save_model_results_to_log(model=None, model_params=None,
             if accuracies is not None:
                 file.write('Mean accuracy:' + str(np.mean(accuracies)) + '\n')
                 file.write('-' * log_params['line_len'] + '\n')
-
-    if report_type == 'Train':
-        # save model as pytorch state dict
-        torch.save(model.state_dict(), model_save_path)
 
     copy_config(dest=model_log_dir)
     sys.stdout.flush()
