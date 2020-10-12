@@ -170,14 +170,21 @@ def train_model(train_method=None):
         train_writer.add_scalar('Validation: loss per epoch', v_epoch_loss, e)
         train_writer.add_scalar('Validation: accuracy per epoch', v_epoch_accuracy, e)
 
-        save_checkpoint(epoch=e, model=model, optimizer=optimizer)
+        save_checkpoint(epoch=e, model=model, model_params=model_params,
+                        optimizer=optimizer, criterion=criterion.__name__, log_dir=log_dir)
+
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
 
-            save_model_results_to_log(model=model, model_params=model_params, train_losses=t_epoch_loss,
-                                      train_accuracy=t_epoch_accuracy, predicted=all_predicted_labels,
-                                      ground_truth=all_ground_truth_labels, sample_names=all_video_filenames,
-                                      log_dir=log_dir)
+            save_model_results_to_log(model=model, model_params=model_params,
+                                      losses=model_train_losses, accuracies=model_train_accuracies,
+                                      log_dir=log_dir, report_type='Train')
+
+            save_model_results_to_log(model=model, model_params=model_params,
+                                      losses=model_valid_losses, accuracies=model_valid_accuracies,
+                                      predicted=all_predicted_labels, ground_truth=all_ground_truth_labels,
+                                      sample_names=all_video_filenames,
+                                      log_dir=log_dir, report_type='Validation')
 
     return model, model_params, criterion, log_dir
 

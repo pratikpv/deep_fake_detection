@@ -96,3 +96,9 @@ def test_model(model, model_params, criterion, log_dir):
             tqdm_test_descr = tqdm_test_descr_format.format(batch_accuracy, batch_loss_val)
             tqdm_test_obj.set_description(tqdm_test_descr)
             tqdm_test_obj.update()
+
+    save_model_results_to_log(model=model, model_params=model_params,
+                              losses=losses, accuracies=accuracies,
+                              predicted=all_predicted_labels, ground_truth=all_ground_truth_labels,
+                              sample_names=all_video_filenames,
+                              log_dir=log_dir, report_type='Test')
