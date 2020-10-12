@@ -69,6 +69,8 @@ def test_model(model, model_params, criterion, log_dir):
     total_samples = 0
     total_correct = 0
     model.eval()
+    model = model.to(device)
+    criterion = criterion.to(device)
     with torch.no_grad():
         for batch_id, samples in enumerate(tqdm_test_obj):
             # prepare data before passing to model

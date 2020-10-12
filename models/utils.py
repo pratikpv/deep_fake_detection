@@ -3,7 +3,10 @@ import sys
 from utils import *
 from data_utils.utils import *
 from quantification.utils import *
-
+from models.DeepFakeDetectModel_1 import *
+from models.DeepFakeDetectModel_2 import *
+from models.DeepFakeDetectModel_3 import *
+from models.DeepFakeDetectModel_4 import *
 
 def print_batch_item(index, item, all_frames=False, simple=True):
     if simple:
@@ -61,5 +64,21 @@ def my_collate(batch):
     batch = tuple(zip(*batch))
     return batch
 
+
 def get_predictions(output):
     return torch.argmax(output, dim=1)
+
+
+def get_model(model_params):
+    model = None
+    if model_params['model_name'] == 'DeepFakeDetectModel_2':
+        model = DeepFakeDetectModel_2(frame_dim=model_params['imsize'], max_num_frames=model_params['max_num_frames'],
+                                      encoder_name=model_params['encoder_name'])
+    elif model_params['model_name'] == 'DeepFakeDetectModel_3':
+        model = DeepFakeDetectModel_3(frame_dim=model_params['imsize'])
+    elif model_params['model_name'] == 'DeepFakeDetectModel_4':
+        model = DeepFakeDetectModel_4(frame_dim=model_params['imsize'], encoder_name=model_params['encoder_name'])
+    else:
+        raise Exception("Unknown model name passed")
+
+    return model

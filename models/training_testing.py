@@ -2,10 +2,7 @@ import torch
 import sys
 from utils import *
 from data_utils.utils import *
-from models.DeepFakeDetectModel_1 import *
-from models.DeepFakeDetectModel_2 import *
-from models.DeepFakeDetectModel_3 import *
-from models.DeepFakeDetectModel_4 import *
+
 from data_utils.datasets import DFDCDataset
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -63,6 +60,8 @@ def train_model(train_method=None):
 
     encoder_name = get_default_cnn_encoder_name()
     imsize = encoder_params[encoder_name]["imsize"]
+    model_params['encoder_name'] = encoder_name
+    model_params['imsize'] = imsize
 
     train_transform = torchvision.transforms.Compose([
         transforms.Resize((imsize, imsize)),
@@ -94,16 +93,7 @@ def train_model(train_method=None):
                               collate_fn=my_collate)
 
     print(f'Batch_size {train_loader.batch_size}')
-    if model_params['model_name'] == 'DeepFakeDetectModel_2':
-        model = DeepFakeDetectModel_2(frame_dim=imsize, max_num_frames=model_params['max_num_frames'],
-                                      encoder_name=encoder_name).to(device)
-    elif model_params['model_name'] == 'DeepFakeDetectModel_3':
-        model = DeepFakeDetectModel_3(frame_dim=imsize).to(device)
-    elif model_params['model_name'] == 'DeepFakeDetectModel_4':
-        model = DeepFakeDetectModel_4(frame_dim=imsize, encoder_name=encoder_name).to(device)
-    else:
-        raise Exception("Unknown model name passed")
-
+    model = get_model(model_params).to(device)
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=model_params['learning_rate'])
 
@@ -171,7 +161,7 @@ def train_model(train_method=None):
         train_writer.add_scalar('Validation: accuracy per epoch', v_epoch_accuracy, e)
 
         save_checkpoint(epoch=e, model=model, model_params=model_params,
-                        optimizer=optimizer, criterion=criterion.__name__, log_dir=log_dir)
+                        optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)
 
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
