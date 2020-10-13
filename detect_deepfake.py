@@ -4,9 +4,9 @@ from models.testing import *
 
 
 def main():
-    print_banner()
+    log_dir = print_banner()
     if args.train_method:
-        model, model_params, criterion, log_dir = train_model(args.train_method)
+        model, model_params, criterion = train_model(args.train_method, log_dir)
     if args.test:
         test_model(model, model_params, criterion, log_dir)
     if args.test_saved_model_path:

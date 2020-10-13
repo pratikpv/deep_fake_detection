@@ -21,11 +21,10 @@ from models.utils import *
 cv2.setNumThreads(0)
 
 
-def train_model(train_method=None):
+def train_model(train_method=None, log_dir=None):
     if train_method is None:
         return None
 
-    log_dir = get_log_dir_name()
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     model_params = get_training_params()
@@ -79,10 +78,10 @@ def train_model(train_method=None):
 
     train_dataset = DFDCDataset(train_data, mode='train', transform=train_transform,
                                 max_num_frames=model_params['max_num_frames'],
-                                frame_dim=imsize)
+                                frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'])
     valid_dataset = DFDCDataset(valid_data, mode='valid', transform=valid_transform,
                                 max_num_frames=model_params['max_num_frames'],
-                                frame_dim=imsize)
+                                frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'])
 
     # num_workers = multiprocessing.cpu_count() - 2
     num_workers = 0
@@ -99,6 +98,7 @@ def train_model(train_method=None):
 
     print(f'Train data len {train_data_len}')
     print(f'Valid data len {valid_data_len}')
+    print(f'model params {model_params}')
     start_epoch = 0
     if train_method == 'resume':
         start_epoch, model, optimizer = load_checkpoint(model, optimizer)
@@ -160,6 +160,9 @@ def train_model(train_method=None):
         train_writer.add_scalar('Validation: loss per epoch', v_epoch_loss, e)
         train_writer.add_scalar('Validation: accuracy per epoch', v_epoch_accuracy, e)
 
+        print(f'Saving model checkpoint at {log_dir} for epoch {e}')
+        save_checkpoint(epoch=e, model=model, model_params=model_params,
+                        optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
 
@@ -176,12 +179,12 @@ def train_model(train_method=None):
                                       predicted=all_predicted_labels, ground_truth=all_ground_truth_labels,
                                       sample_names=all_video_filenames,
                                       log_dir=log_dir, report_type=report_type)
-
-            print(f'Saving model checkpoint at {log_dir} for epoch {e}')
+            best_chkpt_path = os.path.join(log_dir, 'best')
+            print(f'Saving model checkpoint at {best_chkpt_path} for epoch {e}')
             save_checkpoint(epoch=e, model=model, model_params=model_params,
-                            optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)
+                            optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=best_chkpt_path)
 
-    return model, model_params, criterion, log_dir
+    return model, model_params, criterion
 
 
 def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loader=None, batch_size=None, device=None,

@@ -218,6 +218,7 @@ def print_banner():
 
     print_line()
 
+    return log_dir
 
 def create_assets_placeholder():
     os.makedirs(get_assets_path(), exist_ok=True)
