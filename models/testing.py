@@ -49,7 +49,7 @@ def test_model(model, model_params, criterion, log_dir):
 
     test_dataset = DFDCDataset(test_data, mode='test', transform=test_transform,
                                max_num_frames=model_params['max_num_frames'],
-                               frame_dim=imsize)
+                               frame_dim=model_params['imsize'])
 
     test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
                              collate_fn=my_collate)

@@ -8,6 +8,7 @@ from models.DeepFakeDetectModel_2 import *
 from models.DeepFakeDetectModel_3 import *
 from models.DeepFakeDetectModel_4 import *
 
+
 def print_batch_item(index, item, all_frames=False, simple=True):
     if simple:
         print_line()
@@ -58,9 +59,10 @@ def global_minibatch_number(epoch, batch_id, batch_size):
 
 def my_collate(batch):
     batch = list(filter(lambda x: x is not None, batch))
-    # for i, b in enumerate(batch):
-    #    print_batch_item(i, b)
-
+    """
+    for i, b in enumerate(batch):
+        print_batch_item(i, b)
+    """
     batch = tuple(zip(*batch))
     return batch
 
@@ -73,7 +75,11 @@ def get_model(model_params):
     model = None
     if model_params['model_name'] == 'DeepFakeDetectModel_2':
         model = DeepFakeDetectModel_2(frame_dim=model_params['imsize'], max_num_frames=model_params['max_num_frames'],
-                                      encoder_name=model_params['encoder_name'])
+                                      encoder_name=model_params['encoder_name'],
+                                      lstm_hidden_dim=model_params['lstm']['hidden_dim'],
+                                      lstm_num_layers=model_params['lstm']['num_layers'],
+                                      lstm_dropout=model_params['lstm']['dropout'],
+                                      )
     elif model_params['model_name'] == 'DeepFakeDetectModel_3':
         model = DeepFakeDetectModel_3(frame_dim=model_params['imsize'])
     elif model_params['model_name'] == 'DeepFakeDetectModel_4':
