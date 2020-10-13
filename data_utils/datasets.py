@@ -9,7 +9,8 @@ from PIL import Image
 
 
 class DFDCDataset(Dataset):
-    def __init__(self, data, mode=None, transform=None, max_num_frames=10, frame_dim=256, device=None):
+    def __init__(self, data, mode=None, transform=None, max_num_frames=10, frame_dim=256, random_sorted=False,
+                 device=None):
         super().__init__()
         self.data = data
         self.mode = mode
@@ -25,11 +26,12 @@ class DFDCDataset(Dataset):
         else:
             raise Exception("Invalid mode in DFDCDataset passed")
 
-        self.lookup_table = self._generate_loopup_table()
+        self.lookup_table = self._generate_lookup_table()
         self.data_len = len(self.data)
         self.transform = transform
         self.max_num_frames = max_num_frames
         self.frame_dim = frame_dim
+        self.random_sorted = random_sorted
 
     def __len__(self) -> int:
         return self.data_len
@@ -45,6 +47,10 @@ class DFDCDataset(Dataset):
             num_of_frames = len(frame_names)
             if num_of_frames == 0:
                 return None
+            if self.random_sorted:
+                # select max_num_frames frames randomly then sort them
+                frame_names = random.sample(frame_names, min(self.max_num_frames, num_of_frames))
+
             frame_names = sorted(frame_names, key=alpha_sort_keys)
             if num_of_frames > self.max_num_frames:
                 frame_names = frame_names[0:self.max_num_frames]
@@ -70,6 +76,6 @@ class DFDCDataset(Dataset):
         item = (video_id, frames, label)
         return item
 
-    def _generate_loopup_table(self):
+    def _generate_lookup_table(self):
         df = pd.read_csv(self.labels_csv, squeeze=True, index_col=0)
         return df.to_dict()
