@@ -49,6 +49,21 @@ def get_backup_train_data_path():
     return config['data_path']['train_backup']
 
 
+def get_train_frame_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['train_frame_label'])
+
+
+def get_valid_frame_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['valid_frame_label'])
+
+
+def get_test_frame_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['test_frame_label'])
+
+
 def get_train_labels_csv_filepath():
     config = load_config()
     return os.path.join(get_assets_path(), config['data_path']['train_labels_csv_filename'])
@@ -219,6 +234,7 @@ def print_banner():
     print_line()
 
     return log_dir
+
 
 def create_assets_placeholder():
     os.makedirs(get_assets_path(), exist_ok=True)
