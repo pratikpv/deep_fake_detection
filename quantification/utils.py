@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import sys
 from utils import *
+from models.checkpoint import *
 
 
 def save_model_results_to_log(model=None, model_params=None,
@@ -145,3 +146,26 @@ def save_model_results_to_log(model=None, model_params=None,
 
     copy_config(dest=model_log_dir)
     sys.stdout.flush()
+
+
+def save_all_model_results(model=None, model_params=None,
+                           train_losses=None, train_accuracies=None,
+                           valid_losses=None, valid_accuracies=None,
+                           valid_predicted=None, valid_ground_truth=None,
+                           valid_sample_names=None,
+                           optimizer=None, criterion=None,
+                           epoch=0, log_dir=None):
+    report_type = 'Train'
+    save_model_results_to_log(model=model, model_params=model_params,
+                              losses=train_losses, accuracies=train_accuracies,
+                              log_dir=log_dir, report_type=report_type)
+
+    report_type = 'Validation'
+    save_model_results_to_log(model=model, model_params=model_params,
+                              losses=valid_losses, accuracies=valid_accuracies,
+                              predicted=valid_predicted, ground_truth=valid_ground_truth,
+                              sample_names=valid_sample_names,
+                              log_dir=log_dir, report_type=report_type)
+
+    save_checkpoint(epoch=epoch, model=model, model_params=model_params,
+                    optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)

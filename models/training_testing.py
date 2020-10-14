@@ -13,7 +13,6 @@ from features.encoders import *
 from torchvision.transforms import transforms
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
-from models.checkpoint import *
 from quantification.utils import *
 import cv2
 from models.utils import *
@@ -160,29 +159,25 @@ def train_model(train_method=None, log_dir=None):
         train_writer.add_scalar('Validation: loss per epoch', v_epoch_loss, e)
         train_writer.add_scalar('Validation: accuracy per epoch', v_epoch_accuracy, e)
 
-        print(f'Saving model checkpoint at {log_dir} for epoch {e}')
-        save_checkpoint(epoch=e, model=model, model_params=model_params,
-                        optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)
+        print(f'Saving model results at {log_dir} for epoch {e}')
+        save_all_model_results(model=model, model_params=model_params,
+                               optimizer=optimizer, criterion=criterion.__class__.__name__,
+                               train_losses=model_train_losses, train_accuracies=model_train_accuracies,
+                               valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
+                               valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
+                               valid_sample_names=all_video_filenames,
+                               epoch=e, log_dir=log_dir)
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
-
-            report_type = 'Train'
-            print(f'Saving model results for {report_type}')
-            save_model_results_to_log(model=model, model_params=model_params,
-                                      losses=model_train_losses, accuracies=model_train_accuracies,
-                                      log_dir=log_dir, report_type=report_type)
-
-            report_type = 'Validation'
-            print(f'Saving model results for {report_type}')
-            save_model_results_to_log(model=model, model_params=model_params,
-                                      losses=model_valid_losses, accuracies=model_valid_accuracies,
-                                      predicted=all_predicted_labels, ground_truth=all_ground_truth_labels,
-                                      sample_names=all_video_filenames,
-                                      log_dir=log_dir, report_type=report_type)
-            best_chkpt_path = os.path.join(log_dir, 'best')
-            print(f'Saving model checkpoint at {best_chkpt_path} for epoch {e}')
-            save_checkpoint(epoch=e, model=model, model_params=model_params,
-                            optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=best_chkpt_path)
+            log_dir_best = os.path.join(log_dir, 'best')
+            print(f'Saving best model results at {log_dir_best} for epoch {e}')
+            save_all_model_results(model=model, model_params=model_params,
+                                   optimizer=optimizer, criterion=criterion.__class__.__name__,
+                                   train_losses=model_train_losses, train_accuracies=model_train_accuracies,
+                                   valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
+                                   valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
+                                   valid_sample_names=all_video_filenames,
+                                   epoch=e, log_dir=log_dir_best)
 
     return model, model_params, criterion
 
