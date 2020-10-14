@@ -7,6 +7,7 @@ from models.DeepFakeDetectModel_1 import *
 from models.DeepFakeDetectModel_2 import *
 from models.DeepFakeDetectModel_3 import *
 from models.DeepFakeDetectModel_4 import *
+from models.DeepFakeDetectModel_5 import *
 
 
 def print_batch_item(index, item, all_frames=False, simple=True):
@@ -84,6 +85,9 @@ def get_model(model_params):
         model = DeepFakeDetectModel_3(frame_dim=model_params['imsize'])
     elif model_params['model_name'] == 'DeepFakeDetectModel_4':
         model = DeepFakeDetectModel_4(frame_dim=model_params['imsize'], encoder_name=model_params['encoder_name'])
+    elif model_params['model_name'] == 'DeepFakeDetectModel_5':
+        model = DeepFakeDetectModel_5(frame_dim=model_params['imsize'], max_num_frames=model_params['max_num_frames'],
+                                      encoder_name=model_params['encoder_name'])
     else:
         raise Exception("Unknown model name passed")
 

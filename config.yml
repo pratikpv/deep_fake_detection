@@ -30,13 +30,15 @@ features:
 cnn_encoder:
   default: 'tf_efficientnet_b0_ns'
 training:
-  train_size: 0.20
+  train_size: 1
   valid_size: 1
+  test_size: 1
   checkpoint_path: 'checkpoints'
   params:
-    model_name: 'DeepFakeDetectModel_3'
-    max_num_frames: 1
-    batch_size: 1024
+    model_name: 'DeepFakeDetectModel_5'
+    max_num_frames: 5
+    batch_size: 32
+    random_sorted: True
     epochs: 50
     learning_rate: 0.001
 logging:
