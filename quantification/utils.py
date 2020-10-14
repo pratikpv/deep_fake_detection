@@ -14,7 +14,7 @@ from models.checkpoint import *
 def save_model_results_to_log(model=None, model_params=None,
                               losses=None, accuracies=None,
                               predicted=None, ground_truth=None,
-                              misc_data=None, sample_names=None, log_dir=None, report_type=None):
+                              misc_data=None, sample_names=None, log_dir=None, report_type=None, probabilities=None):
     log_params = get_log_params()
     model_name = model_params['model_name']
     num_of_classes = 2
@@ -37,9 +37,8 @@ def save_model_results_to_log(model=None, model_params=None,
 
     report = None
     if predicted is not None:
-        sample_names_mp4 = [i + '.mp4' for i in sample_names]
-        df = pd.DataFrame([sample_names_mp4, ground_truth, predicted]).T
-        df.columns = ['sample_name', 'ground_truth', 'predictions']
+        df = pd.DataFrame([sample_names, ground_truth, predicted, probabilities]).T
+        df.columns = ['sample_name', 'ground_truth', 'predictions', 'probability']
         df = df.set_index(['sample_name'])
         df.to_csv(all_samples_pred_csv)
 
@@ -154,7 +153,7 @@ def save_all_model_results(model=None, model_params=None,
                            valid_predicted=None, valid_ground_truth=None,
                            valid_sample_names=None,
                            optimizer=None, criterion=None,
-                           epoch=0, log_dir=None):
+                           epoch=0, log_dir=None, probabilities=None):
     report_type = 'Train'
     save_model_results_to_log(model=model, model_params=model_params,
                               losses=train_losses, accuracies=train_accuracies,
@@ -165,7 +164,7 @@ def save_all_model_results(model=None, model_params=None,
                               losses=valid_losses, accuracies=valid_accuracies,
                               predicted=valid_predicted, ground_truth=valid_ground_truth,
                               sample_names=valid_sample_names,
-                              log_dir=log_dir, report_type=report_type)
+                              log_dir=log_dir, report_type=report_type, probabilities=probabilities)
 
     save_checkpoint(epoch=epoch, model=model, model_params=model_params,
                     optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)
