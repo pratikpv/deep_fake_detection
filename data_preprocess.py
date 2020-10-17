@@ -564,6 +564,45 @@ def validate_data_loaders(data_root_dir):
         print(f'---- index = {idx} video_id = {video_id}, frames = {frames}, label = {label} -----')
 
 
+def generate_frame_label_csv(mode=None):
+    if mode == 'train':
+        originals_, fakes_ = get_training_reals_and_fakes(args.train_data_root_dir)
+        csv_file = get_train_frame_label_csv_path()
+        crop_path = get_train_crop_faces_data_path()
+    elif mode == 'valid':
+        originals_, fakes_ = get_valid_reals_and_fakes()
+        csv_file = get_valid_frame_label_csv_path()
+        crop_path = get_valid_crop_faces_data_path()
+    elif mode == 'test':
+        originals_, fakes_ = get_test_reals_and_fakes()
+        csv_file = get_test_frame_label_csv_path()
+        crop_path = get_test_crop_faces_data_path()
+    else:
+        raise Exception('Bad mode in generate_frame_label_csv')
+
+    originals = [os.path.splitext(video_filename)[0] for video_filename in originals_]
+    fakes = [os.path.splitext(video_filename)[0] for video_filename in fakes_]
+
+    print(f'mode {mode}, csv file : {csv_file}')
+    df = pd.DataFrame(columns=['video_id', 'frame', 'label'])
+
+    crop_ids = glob(crop_path + '/*')
+    results = []
+    with multiprocessing.Pool(8) as pool:
+        jobs = []
+        for cid in tqdm(crop_ids, desc='Scheduling jobs to label frames'):
+            jobs.append(pool.apply_async(get_video_frame_labels_mapping, (cid, originals, fakes,)))
+
+        for job in tqdm(jobs, desc="Labeling frames"):
+            r = job.get()
+            results.append(r)
+
+    for r in tqdm(results, desc='Consolidating results'):
+        df = df.append(r, ignore_index=True)
+    df.set_index('video_id', inplace=True)
+    df.to_csv(csv_file)
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -670,6 +709,12 @@ def main():
         print('Generating pickle file for processed test samples')
         generate_processed_test_video_filepaths(get_test_data_path())
 
+    if args.gen_frame_label:
+        modes = ['test', 'valid', 'test']
+        for m in modes:
+            print(f'Generating frame_label csv for processed {m} samples')
+            generate_frame_label_csv(mode=m)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -717,6 +762,10 @@ if __name__ == '__main__':
     parser.add_argument('--gen_proc_pkl', action='store_true',
                         help='Generate pickle file for processed training and validation samples',
                         default=False)
+    parser.add_argument('--gen_frame_label', action='store_true',
+                        help='Generate csv for each frame and label pair',
+                        default=False)
+
     args = parser.parse_args()
     print(args)
     create_assets_placeholder()
