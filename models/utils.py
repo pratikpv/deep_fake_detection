@@ -8,6 +8,7 @@ from models.DeepFakeDetectModel_2 import *
 from models.DeepFakeDetectModel_3 import *
 from models.DeepFakeDetectModel_4 import *
 from models.DeepFakeDetectModel_5 import *
+from models.DeepFakeDetectModel_6 import *
 
 
 def print_batch_item(index, item, all_frames=False, simple=True):
@@ -69,7 +70,12 @@ def my_collate(batch):
 
 
 def get_predictions(output):
-    return torch.argmax(output, dim=1)
+    # return torch.argmax(output, dim=1)
+    return torch.round(torch.sigmoid(output))
+
+
+def get_probability(output):
+    return torch.sigmoid(output)
 
 
 def get_model(model_params):
@@ -88,6 +94,8 @@ def get_model(model_params):
     elif model_params['model_name'] == 'DeepFakeDetectModel_5':
         model = DeepFakeDetectModel_5(frame_dim=model_params['imsize'], max_num_frames=model_params['max_num_frames'],
                                       encoder_name=model_params['encoder_name'])
+    elif model_params['model_name'] == 'DeepFakeDetectModel_6':
+        model = DeepFakeDetectModel_6(frame_dim=model_params['imsize'], encoder_name=model_params['encoder_name'])
     else:
         raise Exception("Unknown model name passed")
 
