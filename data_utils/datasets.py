@@ -10,7 +10,7 @@ from PIL import Image
 
 class DFDCDataset(Dataset):
     def __init__(self, data, mode=None, transform=None, max_num_frames=10, frame_dim=256, random_sorted=False,
-                 device=None):
+                 device=None, expand_label_dim=False, fill_empty=True):
         super().__init__()
         self.data = data
         self.mode = mode
@@ -32,6 +32,8 @@ class DFDCDataset(Dataset):
         self.max_num_frames = max_num_frames
         self.frame_dim = frame_dim
         self.random_sorted = random_sorted
+        self.expand_label_dim = expand_label_dim
+        self.fill_empty = fill_empty
 
     def __len__(self) -> int:
         return self.data_len
@@ -43,7 +45,14 @@ class DFDCDataset(Dataset):
         crops_id_path = os.path.join(self.crops_dir, video_id)
         debug = False
         if not debug:
-            frame_names = glob(crops_id_path + '/*_0.png')
+            frame_names = glob(crops_id_path + '/*_*.png')
+            # find number of faces detected in this set of crops
+            face_ids = list(
+                set([i.replace(crops_id_path + '/', '').replace('.png', '').split('_')[1] for i in frame_names]))
+            if len(face_ids) > 1:
+                # if number of faces were more than one then chose a face randomly, and get all crops for that face.
+                face_id_rand = random.choice(face_ids)
+                frame_names = glob(crops_id_path + '/*_{}.png'.format(face_id_rand))
             num_of_frames = len(frame_names)
             if num_of_frames == 0:
                 return None
@@ -62,17 +71,24 @@ class DFDCDataset(Dataset):
                     # print(f.shape)
                 frames.append(image)
 
-            if num_of_frames < self.max_num_frames:
-                delta = self.max_num_frames - num_of_frames
-                for f in range(delta):
-                    frames.append(torch.zeros_like(frames[0]))
+            if self.fill_empty:
+                if num_of_frames < self.max_num_frames:
+                    delta = self.max_num_frames - num_of_frames
+                    for f in range(delta):
+                        frames.append(torch.zeros_like(frames[0]))
         else:
             frames = list()
             for f in range(self.max_num_frames):
                 frames.append(torch.ones(3, self.frame_dim, self.frame_dim) * (random.randint(1, 5)))
 
         frames = torch.stack(frames, dim=0)
-        label = torch.tensor(self.lookup_table[video_filename], dtype=torch.long)
+        label = self.lookup_table[video_filename]
+        if self.expand_label_dim:
+            label = label * np.ones(self.max_num_frames)
+            # TODO:
+            # if fill_empty, set labels of these filled frames to real? as there are no faces in this empty frames?
+            #
+        label = torch.tensor(label, dtype=torch.long)
         item = (video_id, frames, label)
         return item
 
