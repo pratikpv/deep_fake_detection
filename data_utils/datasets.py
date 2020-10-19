@@ -95,3 +95,40 @@ class DFDCDataset(Dataset):
     def _generate_lookup_table(self):
         df = pd.read_csv(self.labels_csv, squeeze=True, index_col=0)
         return df.to_dict()
+
+
+class DFDCDatasetSimple(Dataset):
+    def __init__(self, mode=None, transform=None, data_size=1):
+        super().__init__()
+        self.mode = mode
+        if self.mode == 'train':
+            self.crops_dir = get_train_crop_faces_data_path()
+            self.labels_csv = get_train_frame_label_csv_path()
+        elif self.mode == 'valid':
+            self.crops_dir = get_valid_crop_faces_data_path()
+            self.labels_csv = get_valid_frame_label_csv_path()
+        elif self.mode == 'test':
+            self.crops_dir = get_test_crop_faces_data_path()
+            self.labels_csv = get_test_frame_label_csv_path()
+        else:
+            raise Exception("Invalid mode in DFDCDataset passed")
+
+        self.data_df = pd.read_csv(self.labels_csv)
+        if data_size < 1:
+            total_data_len = int(len(self.data_df) * data_size)
+            self.data_df = self.data_df.iloc[0:total_data_len]
+        self.data_dict = self.data_df.to_dict(orient='records')
+        self.data_len = len(self.data_df)
+        self.transform = transform
+
+    def __len__(self) -> int:
+        return self.data_len
+
+    def __getitem__(self, index: int):
+        item = self.data_dict[index].copy()
+        frame = Image.open(os.path.join(self.crops_dir, str(item['video_id']), item['frame']))
+        if self.transform is not None:
+            frame = self.transform(frame)
+        item['frame_tensor'] = frame
+        item['label'] = torch.tensor(item['label'])
+        return item
