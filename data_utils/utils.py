@@ -156,6 +156,24 @@ def get_training_reals_and_fakes(root_dir):
     return originals, fakes
 
 
+def get_valid_reals_and_fakes():
+    labels_csv = get_valid_labels_csv_filepath()
+    df = pd.read_csv(labels_csv, index_col=0)
+    originals = list(df[df['label'] == 0].index.values)
+    fakes = list(df[df['label'] == 1].index.values)
+
+    return originals, fakes
+
+
+def get_test_reals_and_fakes():
+    labels_csv = get_test_labels_csv_filepath()
+    df = pd.read_csv(labels_csv, index_col=0)
+    originals = list(df[df['label'] == 0].index.values)
+    fakes = list(df[df['label'] == 1].index.values)
+
+    return originals, fakes
+
+
 def get_all_training_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
     video_filepaths = []
     for json_path in glob(os.path.join(root_dir, "*/metadata.json")):
@@ -175,6 +193,8 @@ def get_all_training_video_filepaths(root_dir, match_proc=False, min_num_frames=
                 video_filepaths.remove(v)
                 continue
             # print(crops_id_path)
+            # TODO:
+            # look for all faces, not just 0th face
             frame_names = glob(crops_id_path + '/*_0.png')
             # print(len(frame_names))
             if len(frame_names) < min_num_frames:
@@ -218,6 +238,7 @@ def get_all_validation_video_filepaths(root_dir, match_proc=False, min_num_frame
                 video_filepaths.remove(v)
     return video_filepaths
 
+
 def get_all_test_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
     video_filepaths = []
     for f in glob(os.path.join(root_dir, "*.mp4")):
@@ -237,6 +258,7 @@ def get_all_test_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
             if len(frame_names) < min_num_frames:
                 video_filepaths.remove(v)
     return video_filepaths
+
 
 def generate_processed_validation_video_filepaths(root_dir):
     files = get_all_validation_video_filepaths(root_dir, match_proc=True)
@@ -339,3 +361,21 @@ def consolidate_training_labels(data_root_dir, csv_file):
                            columns=['filename', 'label']).set_index('filename')
     df = df_real.append(df_fake)
     df.to_csv(csv_file)
+
+
+def get_video_frame_labels_mapping(cid, originals, fakes):
+    cid_ = os.path.basename(cid)
+    if cid_ in originals:
+        crop_label = 0
+    elif cid_ in fakes:
+        crop_label = 1
+    else:
+        raise Exception('Unknown label')
+    crop_items = glob(cid + '/*')
+    df = pd.DataFrame(columns=['video_id', 'frame', 'label'])
+    for crp_itm in crop_items:
+        crp_itm_ = os.path.basename(crp_itm)
+        new_row = {'video_id': cid_, 'frame': crp_itm_, 'label': crop_label}
+        df = df.append(new_row, ignore_index=True)
+
+    return df
