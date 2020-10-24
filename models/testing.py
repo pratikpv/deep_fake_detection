@@ -44,12 +44,12 @@ def test_model(model, model_params, criterion, log_dir):
         torchvision.transforms.ToTensor(),
     ])
 
-    # num_workers = multiprocessing.cpu_count() - 2
+    #num_workers = multiprocessing.cpu_count() - 2
     num_workers = 0
 
     test_dataset = DFDCDataset(test_data, mode='test', transform=test_transform,
                                max_num_frames=model_params['max_num_frames'],
-                               frame_dim=model_params['imsize'])
+                               frame_dim=model_params['imsize'], expand_label_dim=model_params['expand_label_dim'])
 
     test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
                              collate_fn=my_collate)

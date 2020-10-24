@@ -77,10 +77,14 @@ def train_model(train_method=None, log_dir=None):
 
     train_dataset = DFDCDataset(train_data, mode='train', transform=train_transform,
                                 max_num_frames=model_params['max_num_frames'],
-                                frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'])
+                                frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'],
+                                expand_label_dim=model_params['expand_label_dim'],
+                                fill_empty=model_params['fill_empty'])
     valid_dataset = DFDCDataset(valid_data, mode='valid', transform=valid_transform,
                                 max_num_frames=model_params['max_num_frames'],
-                                frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'])
+                                frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'],
+                                expand_label_dim=model_params['expand_label_dim'],
+                                fill_empty=model_params['fill_empty'])
 
     # num_workers = multiprocessing.cpu_count() - 2
     num_workers = 0
@@ -92,7 +96,8 @@ def train_model(train_method=None, log_dir=None):
 
     print(f'Batch_size {train_loader.batch_size}')
     model = get_model(model_params).to(device)
-    criterion = nn.CrossEntropyLoss().to(device)
+    #criterion = nn.CrossEntropyLoss().to(device)
+    criterion = nn.BCEWithLogitsLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=model_params['learning_rate'])
 
     print(f'Train data len {train_data_len}')
@@ -105,13 +110,14 @@ def train_model(train_method=None, log_dir=None):
     else:
         print(f'Starting training from scratch')
 
-    tqdm_train_descr_format = "Training model: Mean train acc = {:02.4f}%, Mean train loss = {:.8f} : Mean valid acc = {:02.4f}%, Mean valid loss = {:.8f}"
+    tqdm_train_descr_format = "Training model: train acc = {:02.4f}%, train loss = {:.8f} : valid acc = {:02.4f}%, valid loss = {:.8f}"
     tqdm_train_descr = tqdm_train_descr_format.format(0, float('inf'), 0, float('inf'))
     tqdm_train_obj = tqdm(range(model_params['epochs']), desc=tqdm_train_descr)
 
     train_writer = SummaryWriter(log_dir=os.path.join(log_dir, 'runs'))
 
     lowest_v_epoch_loss = float('inf')
+    highest_v_epoch_acc = 0.0
     model_train_accuracies = []
     model_train_losses = []
     model_valid_accuracies = []
@@ -133,8 +139,8 @@ def train_model(train_method=None, log_dir=None):
         model_train_accuracies.append(t_epoch_accuracy)
         model_train_losses.append(t_epoch_loss)
 
-        tqdm_descr = tqdm_train_descr_format.format(np.mean(model_train_accuracies), np.mean(model_train_losses),
-                                                    np.mean(model_valid_accuracies), np.mean(model_valid_losses))
+        tqdm_descr = tqdm_train_descr_format.format(t_epoch_accuracy, t_epoch_loss,
+                                                    0, float('inf'))
         tqdm_train_obj.set_description(tqdm_descr)
         tqdm_train_obj.update()
 
@@ -142,17 +148,19 @@ def train_model(train_method=None, log_dir=None):
         train_writer.add_scalar('Training: accuracy per epoch', t_epoch_accuracy, e)
 
         v_epoch_accuracy, v_epoch_loss, all_predicted_labels, \
-        all_ground_truth_labels, all_video_filenames = valid_epoch(
-            epoch=e, model=model, criterion=criterion, optimizer=optimizer,
-            data_loader=valid_loader, batch_size=model_params['batch_size'],
-            device=device,
-            log_dir=log_dir, sum_writer=train_writer, use_tqdm=train_valid_use_tqdm)
+        all_ground_truth_labels, all_video_filenames = valid_epoch(epoch=e, model=model, criterion=criterion,
+                                                                   optimizer=optimizer,
+                                                                   data_loader=valid_loader,
+                                                                   batch_size=model_params['batch_size'],
+                                                                   device=device,
+                                                                   log_dir=log_dir, sum_writer=train_writer,
+                                                                   use_tqdm=train_valid_use_tqdm)
 
         model_valid_accuracies.append(v_epoch_accuracy)
         model_valid_losses.append(v_epoch_loss)
 
-        tqdm_descr = tqdm_train_descr_format.format(np.mean(model_train_accuracies), np.mean(model_train_losses),
-                                                    np.mean(model_valid_accuracies), np.mean(model_valid_losses))
+        tqdm_descr = tqdm_train_descr_format.format(t_epoch_accuracy, t_epoch_loss,
+                                                    v_epoch_accuracy, v_epoch_loss)
         tqdm_train_obj.set_description(tqdm_descr)
         tqdm_train_obj.update()
 
@@ -167,10 +175,23 @@ def train_model(train_method=None, log_dir=None):
                                valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                valid_sample_names=all_video_filenames,
                                epoch=e, log_dir=log_dir)
+
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
-            log_dir_best = os.path.join(log_dir, 'best')
-            print(f'Saving best model results at {log_dir_best} for epoch {e}')
+            log_dir_best = os.path.join(log_dir, 'lowest_loss')
+            print(f'Saving best model (low loss) results at {log_dir_best} for epoch {e}')
+            save_all_model_results(model=model, model_params=model_params,
+                                   optimizer=optimizer, criterion=criterion.__class__.__name__,
+                                   train_losses=model_train_losses, train_accuracies=model_train_accuracies,
+                                   valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
+                                   valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
+                                   valid_sample_names=all_video_filenames,
+                                   epoch=e, log_dir=log_dir_best)
+
+        if highest_v_epoch_acc < v_epoch_accuracy:
+            highest_v_epoch_acc = v_epoch_accuracy
+            log_dir_best = os.path.join(log_dir, 'highest_acc')
+            print(f'Saving best model (high acc) results at {log_dir_best} for epoch {e}')
             save_all_model_results(model=model, model_params=model_params,
                                    optimizer=optimizer, criterion=criterion.__class__.__name__,
                                    train_losses=model_train_losses, train_accuracies=model_train_accuracies,
@@ -273,6 +294,7 @@ def valid_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
             # prepare data before passing to model
             batch_size = len(samples[0])
             all_video_filenames.extend(samples[0])
+
             frames_ = samples[1]
             frames = torch.stack(frames_).to(device)
             labels = torch.stack(samples[2]).to(device)
