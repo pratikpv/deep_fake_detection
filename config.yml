@@ -10,6 +10,9 @@ data_path:
   processed_train_filename: 'processed_train_samples.pkl'
   processed_valid_filename: 'processed_valid_samples.pkl'
   processed_test_filename: 'processed_test_samples.pkl'
+  train_frame_label: 'train_frame_label.csv'
+  valid_frame_label: 'valid_frame_label.csv'
+  test_frame_label: 'test_frame_label.csv'
 data_augmentation:
   plan_pkl_filename: 'data_augmentation_plan.pkl'
   plan_txt_filename: 'data_augmentation_plan.txt'
@@ -35,12 +38,10 @@ training:
   test_size: 1
   checkpoint_path: 'checkpoints'
   params:
-    model_name: 'DeepFakeDetectModel_5'
-    max_num_frames: 5
-    batch_size: 32
-    random_sorted: True
-    epochs: 50
+    model_name: 'DeepFakeDetectModel_6'
+    epochs: 5
     learning_rate: 0.001
+    batch_size: 128
 logging:
   root_log_dir: logs
   line_len: 80
