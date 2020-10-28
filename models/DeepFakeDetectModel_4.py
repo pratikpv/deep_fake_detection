@@ -8,6 +8,10 @@ import torch.nn.functional as F
 
 
 class DeepFakeDetectModel_4(nn.Module):
+    """
+    Use one frame from each video for classification
+    Expects original method of training/testing with DFDCDataset class
+    """
     def __init__(self, frame_dim=None, encoder_name=None):
         super().__init__()
         self.image_dim = frame_dim
@@ -19,7 +23,7 @@ class DeepFakeDetectModel_4(nn.Module):
             nn.Linear(self.encoder_flat_feature_dim, int(self.encoder_flat_feature_dim * .10)),
             nn.Dropout(0.50),
             nn.ReLU(),
-            nn.Linear(int(self.encoder_flat_feature_dim * .10), 2),
+            nn.Linear(int(self.encoder_flat_feature_dim * .10), self.num_of_classes),
         )
 
     def forward(self, x):
