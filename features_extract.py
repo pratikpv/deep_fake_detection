@@ -15,7 +15,7 @@ def generate_cnn_video_encodings_main(crops_dir, features_dir):
     for d in glob(os.path.join(crops_dir, "*")):
         crops_paths.append(os.path.join(crops_dir, d))
 
-    #generate_cnn_video_encodings(crops_paths[0], features_dir)
+    # generate_cnn_video_encodings(crops_paths[0], features_dir)
     crops_paths = crops_paths[0:10]
     crops_paths_len = len(crops_paths)
     with multiprocessing.Pool(2) as pool:
@@ -31,6 +31,30 @@ def generate_cnn_video_encodings_main(crops_dir, features_dir):
             results.append(job.get())
 
 
+def generate_optical_flow_data_batch(crop_faces_data_path, optical_flow_data_path, optical_png_data_path):
+    print(f'Crops dir {crop_faces_data_path}')
+    print(f'Optical flow dir {optical_flow_data_path}')
+    print(f'Optical png dir {optical_png_data_path}')
+
+    encoder_name = get_default_cnn_encoder_name()
+    imsize = encoder_params[encoder_name]["imsize"]
+
+    video_ids_path = glob(crop_faces_data_path + "/*")
+    video_ids_len = len(video_ids_path)
+    with multiprocessing.Pool(2) as pool:
+        jobs = []
+        results = []
+        for vidx in tqdm(range(video_ids_len), desc="Scheduling jobs"):
+            jobs.append(pool.apply_async(generate_optical_flow_data,
+                                         (crop_faces_data_path, optical_flow_data_path, optical_png_data_path,
+                                          os.path.basename(video_ids_path[vidx]), imsize)
+                                         )
+                        )
+
+        for job in tqdm(jobs, desc="Generating optical flow data"):
+            results.append(job.get())
+
+
 def main():
     if args.encode_video_frames:
         print('Encoding video frames for training data')
@@ -40,12 +64,27 @@ def main():
         print('Encoding video frames for test data')
         generate_cnn_video_encodings_main(get_test_crop_faces_data_path(), get_test_faces_cnn_features_data_path())
 
+    if args.gen_optic_data:
+        print(f'Generating optical flow data for training samples')
+        generate_optical_flow_data_batch(get_train_crop_faces_data_path(), get_train_optical_flow_data_path(),
+                                         get_train_optical_png_data_path())
+        print(f'Generating optical flow data for valid samples')
+        generate_optical_flow_data_batch(get_valid_crop_faces_data_path(), get_valid_optical_flow_data_path(),
+                                         get_valid_optical_png_data_path())
+        print(f'Generating optical flow data for test samples')
+        generate_optical_flow_data_batch(get_test_crop_faces_data_path(), get_test_optical_flow_data_path(),
+                                         get_test_optical_png_data_path())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract features from DFDC')
 
     parser.add_argument('--encode_video_frames', action='store_true',
                         help='Use an encoder to get CNN features from each video frames of dataset',
+                        default=False)
+
+    parser.add_argument('--gen_optic_data', action='store_true',
+                        help='Generate optical flow data',
                         default=False)
 
     args = parser.parse_args()

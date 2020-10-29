@@ -149,6 +149,36 @@ def get_test_crop_faces_data_path():
     return config['features']['test_crop_faces']
 
 
+def get_train_optical_flow_data_path():
+    config = load_config()
+    return config['features']['train_optical_flow']
+
+
+def get_valid_optical_flow_data_path():
+    config = load_config()
+    return config['features']['valid_optical_flow']
+
+
+def get_test_optical_flow_data_path():
+    config = load_config()
+    return config['features']['test_optical_flow']
+
+
+def get_train_optical_png_data_path():
+    config = load_config()
+    return config['features']['train_optical_png']
+
+
+def get_valid_optical_png_data_path():
+    config = load_config()
+    return config['features']['valid_optical_png']
+
+
+def get_test_optical_png_data_path():
+    config = load_config()
+    return config['features']['test_optical_png']
+
+
 def get_train_faces_cnn_features_data_path():
     config = load_config()
     return os.path.join(config['features']['train_faces_cnn'], get_default_cnn_encoder_name())

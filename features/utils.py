@@ -5,6 +5,7 @@ from PIL import Image
 from torchvision.transforms import transforms
 import os
 from utils import *
+import features.vector_flow.vector_flow as vf
 
 
 def get_simple_transforms(imsize):
@@ -110,3 +111,45 @@ def verify_cnn_video_encodings(item_dir_path=None, features_dir=None, overwrite=
             print('match')
         else:
             print('not-match')
+
+
+def generate_optical_flow_data(crop_faces_data_path, optical_flow_data_path, optical_png_data_path,
+                               video_id, imsize, overwrite=True, delete_flow_dir=True):
+    if not overwrite and os.path.isdir(os.path.join(optical_png_data_path, video_id)):
+        return
+
+    os.makedirs(os.path.join(optical_flow_data_path, video_id), exist_ok=True)
+    os.makedirs(os.path.join(optical_png_data_path, video_id), exist_ok=True)
+
+    flow_model = vf.get_optical_flow_model()
+    resize_dim = (imsize, imsize)
+
+    vid_path = os.path.join(crop_faces_data_path, video_id)
+    frame_names = glob(vid_path + "/*.png")
+    face_ids = list(
+        set([i.replace(vid_path + '/', '').replace('.png', '').split('_')[1] for i in frame_names]))
+
+    image_pair = []
+    for fid in face_ids:
+        frame_names_per_id = glob(vid_path + "/*_{}.png".format(fid))
+        frame_names_per_id = sorted(frame_names_per_id, key=alpha_sort_keys)
+        flen = len(frame_names_per_id)
+        for i in range(0, flen - 1):
+            image_pair.append((frame_names_per_id[i], frame_names_per_id[i + 1]))
+
+    for pair in image_pair:
+        image1, image2 = pair[0], pair[1]
+        i1 = os.path.splitext(os.path.basename(image1))[0]
+        i2 = os.path.splitext(os.path.basename(image2))[0]
+        flow_file = i1 + '_to_' + i2 + '.flo'
+        flow_png = i1 + '_to_' + i2 + '.png'
+        flow_file_path = os.path.join(optical_flow_data_path, video_id, flow_file)
+        flow_image_path = os.path.join(optical_png_data_path, video_id, flow_png)
+        # print('*' * 50)
+        # print(f'image1 {image1} -> image2 {image2}')
+        # print(f'flow_file_path = {flow_file_path}')
+        # print(f'flow_image_path = {flow_image_path}')
+        vf.gen_vector_flow_png(flow_model, image1, image2, flow_file_path, flow_image_path, resize_dim)
+
+    if delete_flow_dir:
+        shutil.rmtree(os.path.join(optical_flow_data_path, video_id))
