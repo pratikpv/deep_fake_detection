@@ -153,7 +153,7 @@ def save_all_model_results(model=None, model_params=None,
                            valid_predicted=None, valid_ground_truth=None,
                            valid_sample_names=None,
                            optimizer=None, criterion=None,
-                           epoch=0, log_dir=None, probabilities=None):
+                           epoch=0, log_dir=None, probabilities=None, amp_dict=None):
     report_type = 'Train'
     save_model_results_to_log(model=model, model_params=model_params,
                               losses=train_losses, accuracies=train_accuracies,
@@ -167,4 +167,119 @@ def save_all_model_results(model=None, model_params=None,
                               log_dir=log_dir, report_type=report_type, probabilities=probabilities)
 
     save_checkpoint(epoch=epoch, model=model, model_params=model_params,
-                    optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir)
+                    optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir, amp_dict=amp_dict)
+
+
+def get_per_video_stat(df, vid, prob_threshold_fake, prob_threshold_real):
+    # number of frames detected as fake with at-least prob of prob_threshold
+    df1 = df.loc[df['video'] == vid]
+    num_fake_frames = np.sum(
+        np.array(df1[df1['predictions'] == 1]['norm_probability'].values) >= prob_threshold_fake)
+    num_real_frames = np.sum(
+        np.array(df1[df1['predictions'] == 0]['norm_probability'].values) >= prob_threshold_real)
+    total_number_frames = len(df1)
+    ground_truth = df1['ground_truth'].values[0]
+    return num_fake_frames, num_real_frames, total_number_frames, ground_truth
+
+
+def split_video(val):
+    return val.split('__')[0]
+
+
+def split_frames(val):
+    return val.split('__')[1]
+
+
+def norm_probability(pred, prob):
+    if pred == 0:
+        return 1 - prob
+    else:
+        return prob
+
+
+def pred_strategy(num_fake_frames, num_real_frames, total_number_frames):
+    if num_fake_frames >= (0.10 * total_number_frames):
+        return 1
+    return 0
+
+
+def gen_report_for_per_frame_model(per_frame_csv=None, log_dir=None, report_type=None, prob_threshold_fake=0.50,
+                                   prob_threshold_real=0.55):
+    df = pd.read_csv(per_frame_csv)
+
+    df['video'] = df['sample_name'].apply(split_video)
+    df['frames'] = df['sample_name'].apply(split_frames)
+    df['norm_probability'] = df.apply(lambda x: norm_probability(x.predictions, x.probability), axis=1)
+    all_videos = set(df['video'].values)
+
+    final_df = pd.DataFrame(
+        columns=['video', 'num_fake_frames', 'num_real_frames', 'total_number_frames', 'ground_truth'])
+
+    for v in all_videos:
+        num_fake_frames, num_real_frames, total_number_frames, \
+        ground_truth = get_per_video_stat(df, v, prob_threshold_fake, prob_threshold_real)
+        prediction = pred_strategy(num_fake_frames, num_real_frames, total_number_frames)
+        final_df = final_df.append({'video': v, 'num_fake_frames': num_fake_frames,
+                                    'num_real_frames': num_real_frames, 'total_number_frames': total_number_frames,
+                                    'ground_truth': ground_truth, 'prediction': prediction},
+                                   ignore_index=True)
+
+    log_params = get_log_params()
+    model_log_dir = os.path.join(log_dir, 'final', report_type)
+    os.makedirs(model_log_dir, exist_ok=True)
+
+    model_conf_mat_csv = os.path.join(model_log_dir, log_params['model_conf_matrix_csv'])
+    model_conf_mat_png = os.path.join(model_log_dir, log_params['model_conf_matrix_png'])
+    model_conf_mat_normalized_csv = os.path.join(model_log_dir, log_params['model_conf_matrix_normalized_csv'])
+    model_conf_mat_normalized_png = os.path.join(model_log_dir, log_params['model_conf_matrix_normalized_png'])
+    all_samples_pred_csv = os.path.join(model_log_dir, log_params['all_samples_pred_csv'])
+    model_log_file = os.path.join(model_log_dir, log_params['model_info_log'])
+
+    final_df = final_df.set_index(['video'])
+    final_df.to_csv(all_samples_pred_csv)
+
+    # generate and save confusion matrix
+    plot_x_label = "Predictions"
+    plot_y_label = "Actual"
+    cmap = plt.cm.Blues
+    class_names = ['Real', 'Fake']
+
+    cm = metrics.confusion_matrix(final_df['ground_truth'], final_df['prediction'])
+    target_class_names = class_names
+
+    df_confusion = pd.DataFrame(cm)
+    df_confusion.index = target_class_names
+    df_confusion.columns = target_class_names
+    df_confusion.round(2)
+    df_confusion.to_csv(model_conf_mat_csv)
+    fig = plt.figure(figsize=(5, 5))
+    sns.heatmap(df_confusion, annot=True, cmap=cmap)
+    plt.xlabel(plot_x_label)
+    plt.ylabel(plot_y_label)
+    plt.title('Confusion Matrix')
+    plt.savefig(model_conf_mat_png)
+    plt.close(fig)
+
+    cm = metrics.confusion_matrix(final_df['ground_truth'], final_df['prediction'], normalize='all')
+    df_confusion = pd.DataFrame(cm)
+    df_confusion.index = target_class_names
+    df_confusion.columns = target_class_names
+    df_confusion.round(2)
+    df_confusion.to_csv(model_conf_mat_normalized_csv)
+    fig = plt.figure(figsize=(5, 5))
+    sns.heatmap(df_confusion, annot=True, cmap=cmap)
+    plt.xlabel(plot_x_label)
+    plt.ylabel(plot_y_label)
+    plt.title('Normalized Confusion Matrix')
+    plt.savefig(model_conf_mat_normalized_png)
+    plt.close(fig)
+
+    report = metrics.classification_report(final_df['ground_truth'], final_df['prediction'],
+                                           target_names=list(target_class_names))
+
+    with open(model_log_file, 'a') as file:
+        if report is not None:
+            file.write(report_type + ' classification report' + '\n')
+            file.write('-' * log_params['line_len'] + '\n')
+            file.write(report + '\n')
+            file.write('-' * log_params['line_len'] + '\n')
