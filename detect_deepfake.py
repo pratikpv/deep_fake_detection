@@ -24,13 +24,8 @@ def main():
         check_point_dict = torch.load(args.test_saved_model_path)
         model = get_model(check_point_dict['model_params'])
         model.load_state_dict(check_point_dict['model_state_dict'])
-        if check_point_dict['criterion'] == 'CrossEntropyLoss':
-            criterion = nn.CrossEntropyLoss()
-        elif check_point_dict['criterion'] == 'BCEWithLogitsLoss':
-            criterion = nn.BCEWithLogitsLoss()
-        else:
-
-            raise Exception('Unknown criterion while testing saved model')
+        print(check_point_dict['criterion'])
+        criterion = nn.BCEWithLogitsLoss()
         print(f"Log override to {check_point_dict['log_dir']}")
         test_model(model, check_point_dict['model_params'], criterion, check_point_dict['log_dir'])
 
