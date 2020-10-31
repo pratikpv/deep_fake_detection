@@ -94,6 +94,21 @@ def get_processed_test_data_filepath():
     return os.path.join(get_assets_path(), config['data_path']['processed_test_filename'])
 
 
+def get_train_facecount_csv_filepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['train_faces_count'])
+
+
+def get_valid_facecount_csv_filepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['valid_faces_count'])
+
+
+def get_test_facecount_csv_filepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['test_faces_count'])
+
+
 def get_data_aug_plan_pkl_filename():
     config = load_config()
     return os.path.join(config['assets'], config['data_augmentation']['plan_pkl_filename'])

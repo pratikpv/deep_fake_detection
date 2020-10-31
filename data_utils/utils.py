@@ -379,3 +379,13 @@ def get_video_frame_labels_mapping(cid, originals, fakes):
         df = df.append(new_row, ignore_index=True)
 
     return df
+
+
+def get_number_of_faces_detected(crops_id_path):
+    cid = os.path.basename(crops_id_path)
+    frame_names = glob(crops_id_path + '/*_*.png')
+    face_id_list = list(
+        set([int(i.replace(crops_id_path + '/', '').replace('.png', '').split('_')[1]) + 1 for i in frame_names]))
+    face_id_list.append(0)
+    num_faces = max(face_id_list)
+    return {'video_id': cid, 'num_faces': num_faces}

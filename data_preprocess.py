@@ -603,6 +603,25 @@ def generate_frame_label_csv(mode=None):
     df.to_csv(csv_file)
 
 
+def count_faces_detected(crop_faces_data_path, csv_file):
+    video_ids_path = glob(crop_faces_data_path + "/*")
+    video_ids_len = len(video_ids_path)
+    results = []
+    df = pd.DataFrame(columns=['video_id', 'num_faces'])
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        for vidx in tqdm(range(video_ids_len), desc="Scheduling jobs"):
+            jobs.append(pool.apply_async(get_number_of_faces_detected, (video_ids_path[vidx],)))
+
+        for job in tqdm(jobs, desc="Counting faces"):
+            results.append(job.get())
+
+    for r in tqdm(results, desc='Consolidating results'):
+        df = df.append(r, ignore_index=True)
+    df.set_index('video_id', inplace=True)
+    df.to_csv(csv_file)
+
+
 def main():
     if args.apply_aug_to_sample:
         print('Applying augmentation and distraction to sample file')
@@ -716,6 +735,15 @@ def main():
             generate_frame_label_csv(mode=m)
 
 
+    if args.count_faces:
+        print('Count faces detected in train dataset')
+        count_faces_detected(get_train_crop_faces_data_path(), get_train_facecount_csv_filepath())
+        print('Count faces detected in valid dataset')
+        count_faces_detected(get_valid_crop_faces_data_path(), get_valid_facecount_csv_filepath())
+        print('Count faces detected in test dataset')
+        count_faces_detected(get_test_crop_faces_data_path(), get_test_facecount_csv_filepath())
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
 
@@ -764,6 +792,9 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--gen_frame_label', action='store_true',
                         help='Generate csv for each frame and label pair',
+                        default=False)
+    parser.add_argument('--count_faces', action='store_true',
+                        help='Generate csv with count of faces detected in each sample',
                         default=False)
 
     args = parser.parse_args()

@@ -13,6 +13,9 @@ data_path:
   train_frame_label: 'train_frame_label.csv'
   valid_frame_label: 'valid_frame_label.csv'
   test_frame_label: 'test_frame_label.csv'
+  train_faces_count: 'train_faces_count.csv'
+  valid_faces_count: 'valid_faces_count.csv'
+  test_faces_count: 'test_faces_count.csv'
 data_augmentation:
   plan_pkl_filename: 'data_augmentation_plan.pkl'
   plan_txt_filename: 'data_augmentation_plan.txt'
