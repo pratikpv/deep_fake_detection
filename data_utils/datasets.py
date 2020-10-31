@@ -98,20 +98,39 @@ class DFDCDataset(Dataset):
 
 
 class DFDCDatasetSimple(Dataset):
-    def __init__(self, mode=None, transform=None, data_size=1):
+    def __init__(self, mode=None, transform=None, data_size=1, dataset=None):
         super().__init__()
         self.mode = mode
-        if self.mode == 'train':
-            self.crops_dir = get_train_crop_faces_data_path()
-            self.labels_csv = get_train_frame_label_csv_path()
-        elif self.mode == 'valid':
-            self.crops_dir = get_valid_crop_faces_data_path()
-            self.labels_csv = get_valid_frame_label_csv_path()
-        elif self.mode == 'test':
-            self.crops_dir = get_test_crop_faces_data_path()
-            self.labels_csv = get_test_frame_label_csv_path()
+        if mode == 'train':
+            if dataset == 'plain':
+                self.labels_csv = get_train_frame_label_csv_path()
+                self.crops_dir = get_train_crop_faces_data_path()
+            elif dataset == 'optical':
+                self.labels_csv = get_train_optframe_label_csv_path()
+                self.crops_dir = get_train_optical_png_data_path()
+            else:
+                raise Exception('Bad dataset in DFDCDatasetSimple')
+        elif mode == 'valid':
+            if dataset == 'plain':
+                self.labels_csv = get_valid_frame_label_csv_path()
+                self.crops_dir = get_valid_crop_faces_data_path()
+            elif dataset == 'optical':
+                self.labels_csv = get_valid_optframe_label_csv_path()
+                self.crops_dir = get_valid_optical_png_data_path()
+            else:
+                raise Exception('Bad dataset in DFDCDatasetSimple')
+
+        elif mode == 'test':
+            if dataset == 'plain':
+                self.labels_csv = get_test_frame_label_csv_path()
+                self.crops_dir = get_test_crop_faces_data_path()
+            elif dataset == 'optical':
+                self.labels_csv = get_test_optframe_label_csv_path()
+                self.crops_dir = get_test_optical_png_data_path()
+            else:
+                raise Exception('Bad dataset in DFDCDatasetSimple')
         else:
-            raise Exception("Invalid mode in DFDCDataset passed")
+            raise Exception('Bad mode in DFDCDatasetSimple')
 
         self.data_df = pd.read_csv(self.labels_csv)
         if data_size < 1:

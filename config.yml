@@ -56,6 +56,8 @@ training:
     batch_size: 384
     fp16: True
     opt_level: 'O1'
+    dataset: 'optical'
+    #dataset: 'plain'
 logging:
   root_log_dir: logs
   line_len: 80

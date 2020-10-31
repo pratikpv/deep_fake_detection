@@ -60,8 +60,10 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                              std=[0.229, 0.224, 0.225]),
     ])
 
-    train_dataset = DFDCDatasetSimple(mode='train', transform=train_transform, data_size=get_training_sample_size())
-    valid_dataset = DFDCDatasetSimple(mode='valid', transform=valid_transform, data_size=get_valid_sample_size())
+    train_dataset = DFDCDatasetSimple(mode='train', transform=train_transform, data_size=get_training_sample_size(),
+                                      dataset=model_params['dataset'])
+    valid_dataset = DFDCDatasetSimple(mode='valid', transform=valid_transform, data_size=get_valid_sample_size(),
+                                      dataset=model_params['dataset'])
 
     num_workers = multiprocessing.cpu_count() - 2
     # num_workers = 0

@@ -32,9 +32,10 @@ def test_model(model, model_params, criterion, log_dir):
     ])
 
     num_workers = multiprocessing.cpu_count() - 2
-    #num_workers = 0
+    # num_workers = 0
 
-    test_dataset = DFDCDatasetSimple(mode='test', transform=test_transform, data_size=get_test_sample_size())
+    test_dataset = DFDCDatasetSimple(mode='test', transform=test_transform, data_size=get_test_sample_size(),
+                                     dataset=model_params['dataset'])
 
     test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
                              pin_memory=True)
