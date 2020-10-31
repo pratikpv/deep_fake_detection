@@ -27,6 +27,8 @@ def test_model(model, model_params, criterion, log_dir):
     test_transform = torchvision.transforms.Compose([
         transforms.Resize((imsize, imsize)),
         torchvision.transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
     ])
 
     num_workers = multiprocessing.cpu_count() - 2
