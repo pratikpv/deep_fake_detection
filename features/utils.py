@@ -114,7 +114,7 @@ def verify_cnn_video_encodings(item_dir_path=None, features_dir=None, overwrite=
 
 
 def generate_optical_flow_data(crop_faces_data_path, optical_flow_data_path, optical_png_data_path,
-                               video_id, imsize, overwrite=True, delete_flow_dir=True):
+                               video_id, imsize, overwrite=False, delete_flow_dir=True):
     if not overwrite and os.path.isdir(os.path.join(optical_png_data_path, video_id)):
         return
 
