@@ -50,7 +50,9 @@ training:
     model_name: 'DeepFakeDetectModel_6'
     epochs: 20
     learning_rate: 0.001
-    batch_size: 128
+    batch_size: 384
+    fp16: True
+    opt_level: 'O1'
 logging:
   root_log_dir: logs
   line_len: 80
