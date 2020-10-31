@@ -79,6 +79,21 @@ def get_test_labels_csv_filepath():
     return os.path.join(get_test_data_path(), config['data_path']['test_labels_csv_filename'])
 
 
+def get_train_optframe_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['train_optframe_label'])
+
+
+def get_valid_optframe_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['valid_optframe_label'])
+
+
+def get_test_optframe_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['test_optframe_label'])
+
+
 def get_processed_train_data_filepath():
     config = load_config()
     return os.path.join(get_assets_path(), config['data_path']['processed_train_filename'])

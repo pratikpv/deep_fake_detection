@@ -564,19 +564,38 @@ def validate_data_loaders(data_root_dir):
         print(f'---- index = {idx} video_id = {video_id}, frames = {frames}, label = {label} -----')
 
 
-def generate_frame_label_csv(mode=None):
+def generate_frame_label_csv(mode=None, dataset=None):
     if mode == 'train':
         originals_, fakes_ = get_training_reals_and_fakes(args.train_data_root_dir)
-        csv_file = get_train_frame_label_csv_path()
-        crop_path = get_train_crop_faces_data_path()
+        if dataset == 'plain':
+            csv_file = get_train_frame_label_csv_path()
+            crop_path = get_train_crop_faces_data_path()
+        elif dataset == 'optical':
+            csv_file = get_train_optframe_label_csv_path()
+            crop_path = get_train_optical_png_data_path()
+        else:
+            raise Exception('Bad dataset')
     elif mode == 'valid':
         originals_, fakes_ = get_valid_reals_and_fakes()
-        csv_file = get_valid_frame_label_csv_path()
-        crop_path = get_valid_crop_faces_data_path()
+        if dataset == 'plain':
+            csv_file = get_valid_frame_label_csv_path()
+            crop_path = get_valid_crop_faces_data_path()
+        elif dataset == 'optical':
+            csv_file = get_valid_optframe_label_csv_path()
+            crop_path = get_valid_optical_png_data_path()
+        else:
+            raise Exception('Bad dataset')
+
     elif mode == 'test':
         originals_, fakes_ = get_test_reals_and_fakes()
-        csv_file = get_test_frame_label_csv_path()
-        crop_path = get_test_crop_faces_data_path()
+        if dataset == 'plain':
+            csv_file = get_test_frame_label_csv_path()
+            crop_path = get_test_crop_faces_data_path()
+        elif dataset == 'optical':
+            csv_file = get_test_optframe_label_csv_path()
+            crop_path = get_test_optical_png_data_path()
+        else:
+            raise Exception('Bad dataset')
     else:
         raise Exception('Bad mode in generate_frame_label_csv')
 
@@ -588,7 +607,7 @@ def generate_frame_label_csv(mode=None):
 
     crop_ids = glob(crop_path + '/*')
     results = []
-    with multiprocessing.Pool(8) as pool:
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         for cid in tqdm(crop_ids, desc='Scheduling jobs to label frames'):
             jobs.append(pool.apply_async(get_video_frame_labels_mapping, (cid, originals, fakes,)))
@@ -729,11 +748,16 @@ def main():
         generate_processed_test_video_filepaths(get_test_data_path())
 
     if args.gen_frame_label:
-        modes = ['test', 'valid', 'test']
+        modes = ['train', 'valid', 'test']
         for m in modes:
             print(f'Generating frame_label csv for processed {m} samples')
-            generate_frame_label_csv(mode=m)
+            generate_frame_label_csv(mode=m, dataset='plain')
 
+    if args.gen_opt_frame_label:
+        modes = ['train', 'valid', 'test']
+        for m in modes:
+            print(f'Generating frame_label csv for processed {m} samples')
+            generate_frame_label_csv(mode=m, dataset='optical')
 
     if args.count_faces:
         print('Count faces detected in train dataset')
@@ -792,6 +816,9 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--gen_frame_label', action='store_true',
                         help='Generate csv for each frame and label pair',
+                        default=False)
+    parser.add_argument('--gen_opt_frame_label', action='store_true',
+                        help='Generate csv for each frame and label pair using optical flow data',
                         default=False)
     parser.add_argument('--count_faces', action='store_true',
                         help='Generate csv with count of faces detected in each sample',

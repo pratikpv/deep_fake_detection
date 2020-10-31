@@ -1,8 +1,8 @@
 assets: 'assets'
 data_path:
-  train: '/home/therock/data2/data_workset/dfdc/train/'
-  valid: '/home/therock/data2/data_workset/dfdc/valid/'
-  test: '/home/therock/data2/data_workset/dfdc/test/'
+  train: '/home/therock/data6/data_workset/dfdc/train/'
+  valid: '/home/therock/data6/data_workset/dfdc/valid/'
+  test: '/home/therock/data6/data_workset/dfdc/test/'
   train_backup: '/home/therock/data5/dataset_master/deepfake_dfdc/train/'
   train_labels_csv_filename: 'train_labels.csv'
   valid_labels_csv_filename: 'labels.csv'
@@ -16,6 +16,9 @@ data_path:
   train_faces_count: 'train_faces_count.csv'
   valid_faces_count: 'valid_faces_count.csv'
   test_faces_count: 'test_faces_count.csv'
+  train_optframe_label: 'train_optframe_label.csv'
+  valid_optframe_label: 'valid_optframe_label.csv'
+  test_optframe_label: 'test_optframe_label.csv'
 data_augmentation:
   plan_pkl_filename: 'data_augmentation_plan.pkl'
   plan_txt_filename: 'data_augmentation_plan.txt'
