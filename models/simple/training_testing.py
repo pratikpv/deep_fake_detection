@@ -2,7 +2,7 @@ import torch
 import sys
 from utils import *
 from data_utils.utils import *
-
+from apex import amp
 from data_utils.datasets import DFDCDataset, DFDCDatasetSimple
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -16,11 +16,12 @@ from torch.utils.tensorboard import SummaryWriter
 from quantification.utils import *
 import cv2
 from models.utils import *
+import PIL
 
 cv2.setNumThreads(0)
 
 
-def train_model( log_dir=None, train_resume_checkpoint=None):
+def train_model(log_dir=None, train_resume_checkpoint=None):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     model_params = get_training_params()
@@ -30,11 +31,26 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
     model_params['encoder_name'] = encoder_name
     model_params['imsize'] = imsize
 
+    def gaussian_blur(img):
+        return img.filter(PIL.ImageFilter.BoxBlur(random.choice([1, 2, 3])))
+
     train_transform = torchvision.transforms.Compose([
+        transforms.RandomChoice([
+            transforms.RandomCrop(imsize, imsize),
+            transforms.ColorJitter(contrast=random.random()),
+            transforms.Lambda(gaussian_blur),
+        ]),
+        transforms.RandomChoice([
+            transforms.RandomHorizontalFlip(p=0.3),
+            transforms.RandomGrayscale(p=0.05),
+            transforms.ColorJitter(brightness=random.random()),
+            transforms.RandomRotation(30),
+        ]),
         transforms.Resize((imsize, imsize)),
         torchvision.transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225]),
+        transforms.RandomErasing(0.30),
     ])
 
     valid_transform = torchvision.transforms.Compose([
@@ -60,13 +76,41 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
     criterion = nn.BCEWithLogitsLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=model_params['learning_rate'])
 
+    if model_params['fp16']:
+        model, optimizer = amp.initialize(model, optimizer,
+                                          opt_level=model_params['opt_level'],
+                                          loss_scale='dynamic')
     print(f'model params {model_params}')
     start_epoch = 0
+    lowest_v_epoch_loss = float('inf')
+    highest_v_epoch_acc = 0.0
+    model_train_accuracies = []
+    model_train_losses = []
+    model_valid_accuracies = []
+    model_valid_losses = []
+
     if train_resume_checkpoint is not None:
-        start_epoch, model, optimizer, _, log_dir = load_checkpoint(model, optimizer,
-                                                                    train_resume_checkpoint)
+        saved_epoch, model, optimizer, _, log_dir, amp_dict = load_checkpoint(model, optimizer,
+                                                                              train_resume_checkpoint)
+        amp.load_state_dict(amp_dict)
+        start_epoch = saved_epoch + 1
         print(f'Resuming Training from epoch {start_epoch}')
         print(f'Resetting log_dir to {log_dir}')
+
+        model_train_accuracies, model_train_losses, model_valid_accuracies, \
+        model_valid_losses = load_acc_loss(model, log_dir)
+
+        if len(model_train_accuracies) != start_epoch:
+            raise Exception(f'Error! model_train_accuracies = {model_train_accuracies}')
+        if len(model_train_losses) != start_epoch:
+            raise Exception(f'Error! model_train_losses = {model_train_losses}')
+        if len(model_valid_accuracies) != start_epoch:
+            raise Exception(f'Error! model_valid_accuracies = {model_valid_accuracies}')
+        if len(model_valid_losses) != start_epoch:
+            raise Exception(f'Error! model_valid_losses = {model_valid_losses}')
+        lowest_v_epoch_loss = min(model_valid_losses)
+        highest_v_epoch_acc = max(model_valid_accuracies)
+        print(f'Loaded model acc and losses data successfully')
     else:
         print(f'Starting training from scratch')
 
@@ -77,16 +121,9 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
 
     train_writer = SummaryWriter(log_dir=os.path.join(log_dir, 'runs'))
 
-    lowest_v_epoch_loss = float('inf')
-    highest_v_epoch_acc = 0.0
-    model_train_accuracies = []
-    model_train_losses = []
-    model_valid_accuracies = []
-    model_valid_losses = []
-
     for e in tqdm_train_obj:
 
-        if e <= start_epoch:
+        if e < start_epoch:
             print(f"Skipping epoch {e}")
             continue
 
@@ -100,7 +137,8 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
                                                            device=device,
                                                            log_dir=log_dir,
                                                            sum_writer=train_writer,
-                                                           use_tqdm=train_valid_use_tqdm)
+                                                           use_tqdm=train_valid_use_tqdm,
+                                                           model_params=model_params)
         model_train_accuracies.append(t_epoch_accuracy)
         model_train_losses.append(t_epoch_loss)
 
@@ -136,7 +174,7 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
         tqdm_descr = tqdm_train_descr_format.format(t_epoch_accuracy, t_epoch_loss, t_epoch_fake_loss,
                                                     t_epoch_real_loss,
                                                     v_epoch_accuracy, v_epoch_loss, v_epoch_fake_loss,
-                                                    v_epoch_real_loss, )
+                                                    v_epoch_real_loss)
         tqdm_train_obj.set_description(tqdm_descr)
         tqdm_train_obj.update()
 
@@ -153,7 +191,8 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
                                valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                valid_sample_names=all_video_frame_pairs,
-                               epoch=e, log_dir=log_dir, probabilities=probabilities)
+                               epoch=e, log_dir=log_dir, probabilities=probabilities,
+                               amp_dict=amp.state_dict())
 
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
@@ -165,7 +204,8 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
                                    valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                    valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                    valid_sample_names=all_video_frame_pairs,
-                                   epoch=e, log_dir=log_dir_best, probabilities=probabilities)
+                                   epoch=e, log_dir=log_dir_best, probabilities=probabilities,
+                                   amp_dict=amp.state_dict())
 
         if highest_v_epoch_acc < v_epoch_accuracy:
             highest_v_epoch_acc = v_epoch_accuracy
@@ -177,13 +217,14 @@ def train_model( log_dir=None, train_resume_checkpoint=None):
                                    valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                    valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                    valid_sample_names=all_video_frame_pairs,
-                                   epoch=e, log_dir=log_dir_best, probabilities=probabilities)
+                                   epoch=e, log_dir=log_dir_best, probabilities=probabilities,
+                                   amp_dict=amp.state_dict())
 
     return model, model_params, criterion
 
 
 def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loader=None, batch_size=None, device=None,
-                log_dir=None, sum_writer=None, use_tqdm=False):
+                log_dir=None, sum_writer=None, use_tqdm=False, model_params=None):
     losses = []
     fake_losses = []
     real_losses = []
@@ -212,7 +253,6 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
         batch_size = labels.shape[0]
 
         output = model(frames)
-
         # print(f'train out= {output}')
         labels = labels.type_as(output)
         fake_loss = 0
@@ -230,7 +270,12 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
         real_loss_val = 0 if real_loss == 0 else real_loss.item()
         fake_loss_val = 0 if fake_loss == 0 else fake_loss.item()
 
-        batch_loss.backward()
+        if model_params['fp16']:
+            with amp.scale_loss(batch_loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
+        else:
+            batch_loss.backward()
+
         optimizer.step()
 
         predicted = get_predictions(output).to('cpu').detach().numpy()
