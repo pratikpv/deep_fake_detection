@@ -17,6 +17,7 @@ from quantification.utils import *
 import cv2
 from models.utils import *
 import PIL
+from pathlib import Path
 
 cv2.setNumThreads(0)
 
@@ -97,13 +98,18 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
         amp.load_state_dict(amp_dict)
         start_epoch = saved_epoch + 1
         print(f'Resuming Training from epoch {start_epoch}')
+        if os.path.basename(log_dir) == 'highest_acc' or os.path.basename(log_dir) == 'lowest_loss':
+            log_dir = Path(log_dir).parent
+
         print(f'Resetting log_dir to {log_dir}')
 
         model_train_accuracies, model_train_losses, model_valid_accuracies, \
         model_valid_losses = load_acc_loss(model, log_dir)
 
+
         if len(model_train_accuracies) != start_epoch:
-            raise Exception(f'Error! model_train_accuracies = {model_train_accuracies}')
+            raise Exception(
+                f'Error! model_train_accuracies = {model_train_accuracies} len is {len(model_train_accuracies)}, expected {start_epoch}')
         if len(model_train_losses) != start_epoch:
             raise Exception(f'Error! model_train_losses = {model_train_losses}')
         if len(model_valid_accuracies) != start_epoch:
@@ -113,6 +119,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
         lowest_v_epoch_loss = min(model_valid_losses)
         highest_v_epoch_acc = max(model_valid_accuracies)
         print(f'Loaded model acc and losses data successfully')
+
     else:
         print(f'Starting training from scratch')
 
@@ -157,18 +164,19 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
 
         print(
             f'Training epoch = {e}, mean acc = {t_epoch_accuracy}, total loss = {t_epoch_loss}, fake loss = {t_epoch_fake_loss},real loss = {t_epoch_real_loss} ')
+
         v_epoch_accuracy, v_epoch_loss, v_epoch_fake_loss, \
         v_epoch_real_loss, all_predicted_labels, \
-        all_ground_truth_labels, all_video_frame_pairs, probabilities = valid_epoch(epoch=e, model=model,
-                                                                                    criterion=criterion,
-                                                                                    optimizer=optimizer,
-                                                                                    data_loader=valid_loader,
-                                                                                    batch_size=model_params[
-                                                                                        'batch_size'],
-                                                                                    device=device,
-                                                                                    log_dir=log_dir,
-                                                                                    sum_writer=train_writer,
-                                                                                    use_tqdm=train_valid_use_tqdm)
+        all_ground_truth_labels, all_video_frame_pairs, \
+        probabilities = valid_epoch(epoch=e, model=model,
+                                    criterion=criterion,
+                                    optimizer=optimizer,
+                                    data_loader=valid_loader,
+                                    batch_size=model_params['batch_size'],
+                                    device=device,
+                                    log_dir=log_dir,
+                                    sum_writer=train_writer,
+                                    use_tqdm=train_valid_use_tqdm)
 
         model_valid_accuracies.append(v_epoch_accuracy)
         model_valid_losses.append(v_epoch_loss)
@@ -198,28 +206,26 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
 
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
-            log_dir_best = os.path.join(log_dir, 'lowest_loss')
-            print(f'Saving best model (low loss) results at {log_dir_best} for epoch {e}')
+            print(f'Saving best model (low loss) results at {log_dir}/lowest_loss for epoch {e}')
             save_all_model_results(model=model, model_params=model_params,
                                    optimizer=optimizer, criterion=criterion.__class__.__name__,
                                    train_losses=model_train_losses, train_accuracies=model_train_accuracies,
                                    valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                    valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                    valid_sample_names=all_video_frame_pairs,
-                                   epoch=e, log_dir=log_dir_best, probabilities=probabilities,
+                                   epoch=e, log_dir=log_dir, log_kind='lowest_loss', probabilities=probabilities,
                                    amp_dict=amp.state_dict())
 
         if highest_v_epoch_acc < v_epoch_accuracy:
             highest_v_epoch_acc = v_epoch_accuracy
-            log_dir_best = os.path.join(log_dir, 'highest_acc')
-            print(f'Saving best model (high acc) results at {log_dir_best} for epoch {e}')
+            print(f'Saving best model (high acc) results at {log_dir}/highest_acc for epoch {e}')
             save_all_model_results(model=model, model_params=model_params,
                                    optimizer=optimizer, criterion=criterion.__class__.__name__,
                                    train_losses=model_train_losses, train_accuracies=model_train_accuracies,
                                    valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                    valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                    valid_sample_names=all_video_frame_pairs,
-                                   epoch=e, log_dir=log_dir_best, probabilities=probabilities,
+                                   epoch=e, log_dir=log_dir, log_kind='highest_acc', probabilities=probabilities,
                                    amp_dict=amp.state_dict())
 
     return model, model_params, criterion
