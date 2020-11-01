@@ -144,10 +144,14 @@ class DFDCDatasetSimple(Dataset):
         return self.data_len
 
     def __getitem__(self, index: int):
-        item = self.data_dict[index].copy()
-        frame = Image.open(os.path.join(self.crops_dir, str(item['video_id']), item['frame']))
-        if self.transform is not None:
-            frame = self.transform(frame)
-        item['frame_tensor'] = frame
-        item['label'] = torch.tensor(item['label'])
-        return item
+        while True:
+            try:
+                item = self.data_dict[index].copy()
+                frame = Image.open(os.path.join(self.crops_dir, str(item['video_id']), item['frame']))
+                if self.transform is not None:
+                    frame = self.transform(frame)
+                item['frame_tensor'] = frame
+                item['label'] = torch.tensor(item['label'])
+                return item
+            except Exception:
+                index = random.randint(0, self.data_len)
