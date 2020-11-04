@@ -80,6 +80,16 @@ def get_probability(output):
 
 def get_model(model_params):
     model = None
+    # validate model_params
+    model_batch_mapping = {
+        'stacked': ['DeepFakeDetectModel_2', 'DeepFakeDetectModel_3', 'DeepFakeDetectModel_4',
+                    'DeepFakeDetectModel_5'],
+        'simple': ['DeepFakeDetectModel_6']
+    }
+
+    if model_params['model_name'] not in model_batch_mapping[model_params['batch_format']]:
+        raise Exception("model_name and batch_format does not match")
+
     if model_params['model_name'] == 'DeepFakeDetectModel_2':
         model = DeepFakeDetectModel_2(frame_dim=model_params['imsize'], max_num_frames=model_params['max_num_frames'],
                                       encoder_name=model_params['encoder_name'],
