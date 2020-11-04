@@ -35,24 +35,34 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
     def gaussian_blur(img):
         return img.filter(PIL.ImageFilter.BoxBlur(random.choice([1, 2, 3])))
 
-    train_transform = torchvision.transforms.Compose([
-        transforms.RandomChoice([
-            transforms.RandomCrop(imsize, imsize),
-            transforms.ColorJitter(contrast=random.random()),
-            transforms.Lambda(gaussian_blur),
-        ]),
-        transforms.RandomChoice([
-            transforms.RandomHorizontalFlip(p=0.3),
-            transforms.RandomGrayscale(p=0.05),
-            transforms.ColorJitter(brightness=random.random()),
-            transforms.RandomRotation(30),
-        ]),
-        transforms.Resize((imsize, imsize)),
-        torchvision.transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
-        transforms.RandomErasing(0.30),
-    ])
+    if model_params['train_transform'] == 'complex':
+        train_transform = torchvision.transforms.Compose([
+            transforms.RandomChoice([
+                transforms.RandomCrop(imsize, imsize),
+                transforms.ColorJitter(contrast=random.random()),
+                transforms.Lambda(gaussian_blur),
+            ]),
+            transforms.RandomChoice([
+                transforms.RandomHorizontalFlip(p=0.3),
+                transforms.RandomGrayscale(p=0.05),
+                transforms.ColorJitter(brightness=random.random()),
+                transforms.RandomRotation(30),
+            ]),
+            transforms.Resize((imsize, imsize)),
+            torchvision.transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+            transforms.RandomErasing(0.30),
+        ])
+
+    elif model_params['train_transform'] == 'simple':
+        train_transform = torchvision.transforms.Compose([
+            transforms.Resize((imsize, imsize)),
+            torchvision.transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+            transforms.RandomErasing(0.30),
+        ])
 
     valid_transform = torchvision.transforms.Compose([
         transforms.Resize((imsize, imsize)),
@@ -105,7 +115,6 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
 
         model_train_accuracies, model_train_losses, model_valid_accuracies, \
         model_valid_losses = load_acc_loss(model, log_dir)
-
 
         if len(model_train_accuracies) != start_epoch:
             raise Exception(
