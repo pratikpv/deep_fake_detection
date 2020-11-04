@@ -11,7 +11,7 @@ class DeepFakeDetectModel_3(nn.Module):
     def __init__(self, frame_dim=None):
         super().__init__()
         self.image_dim = frame_dim
-        self.num_of_classes = 2
+        self.num_of_classes = 1
         self.padding = 2
         self.conv1_out_channel = 6
         self.conv1_kernel_size = 3

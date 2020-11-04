@@ -15,7 +15,7 @@ class DeepFakeDetectModel_4(nn.Module):
     def __init__(self, frame_dim=None, encoder_name=None):
         super().__init__()
         self.image_dim = frame_dim
-        self.num_of_classes = 2
+        self.num_of_classes = 1
         self.encoder = encoder_params[encoder_name]["init_op"]()
         self.encoder_flat_feature_dim = encoder_params[encoder_name]["flat_features_dim"]
 

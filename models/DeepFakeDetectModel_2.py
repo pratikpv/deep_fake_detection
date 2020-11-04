@@ -27,7 +27,7 @@ class DeepFakeDetectModel_2(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(self.lstm_hidden_dim * self.max_num_frames, 128),
             nn.ReLU(),
-            nn.Linear(128, 2),
+            nn.Linear(128, 1),
         )
 
     def forward(self, x):
