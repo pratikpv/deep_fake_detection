@@ -2,9 +2,10 @@ import torch
 import sys
 from utils import *
 from data_utils.utils import *
-from data_utils.datasets import DFDCDataset
+from data_utils.datasets import DFDCDataset, DFDCDatasetSimple
 from torch.utils.data import DataLoader
 import torch.nn as nn
+import multiprocessing
 from torchvision.transforms import transforms
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
@@ -20,21 +21,22 @@ def test_model(model, model_params, criterion, log_dir):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    use_processed_data = True
-    if use_processed_data:
-        test_data = get_processed_test_video_filepaths()
-    else:
-        test_data = get_all_test_video_filepaths(get_test_data_path())
-
-    test_data_len = len(test_data)
-    sample_random = True
-    test_size = get_test_sample_size()
-    if test_size > 0.0:
-        test_data_len = int(test_data_len * test_size)
-        if sample_random:
-            test_data = random.sample(test_data, test_data_len)
+    if model_params['batch_format'] == 'stacked':
+        use_processed_data = True
+        if use_processed_data:
+            test_data = get_processed_test_video_filepaths()
         else:
-            test_data = test_data[0: test_data_len]
+            test_data = get_all_test_video_filepaths(get_test_data_path())
+
+        test_data_len = len(test_data)
+        sample_random = True
+        test_size = get_test_sample_size()
+        if test_size > 0.0:
+            test_data_len = int(test_data_len * test_size)
+            if sample_random:
+                test_data = random.sample(test_data, test_data_len)
+            else:
+                test_data = test_data[0: test_data_len]
 
     encoder_name = get_default_cnn_encoder_name()
     imsize = encoder_params[encoder_name]["imsize"]
@@ -42,28 +44,41 @@ def test_model(model, model_params, criterion, log_dir):
     test_transform = torchvision.transforms.Compose([
         transforms.Resize((imsize, imsize)),
         torchvision.transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
     ])
 
-    #num_workers = multiprocessing.cpu_count() - 2
-    num_workers = 0
+    num_workers = multiprocessing.cpu_count() - 2
+    # num_workers = 0
 
-    test_dataset = DFDCDataset(test_data, mode='test', transform=test_transform,
-                               max_num_frames=model_params['max_num_frames'],
-                               frame_dim=model_params['imsize'], expand_label_dim=model_params['expand_label_dim'])
+    if model_params['batch_format'] == 'stacked':
+        test_dataset = DFDCDataset(test_data, mode='test', transform=test_transform,
+                                   max_num_frames=model_params['max_num_frames'],
+                                   frame_dim=model_params['imsize'], expand_label_dim=model_params['expand_label_dim'])
 
-    test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
-                             collate_fn=my_collate)
+        test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
+                                 collate_fn=my_collate)
+    elif model_params['batch_format'] == 'simple':
+        test_dataset = DFDCDatasetSimple(mode='test', transform=test_transform, data_size=get_test_sample_size(),
+                                         dataset=model_params['dataset'])
+
+        test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
+                                 pin_memory=True)
+    else:
+        raise Exception("model_params['batch_format'] not supported")
 
     print(f"Batch_size {model_params['batch_size']}")
-    print(f'Test data len {test_data_len}')
 
-    tqdm_test_descr_format = "Testing model: Test acc = {:02.4f}%, Mean train loss = {:.8f}"
-    tqdm_test_descr = tqdm_test_descr_format.format(0, float('inf'))
+    tqdm_test_descr_format = "Testing model: Test acc = {:02.4f}%, Mean test loss = {:.8f} fl = {:.8f} rl = {:.8f}"
+    tqdm_test_descr = tqdm_test_descr_format.format(0, float('inf'), float('inf'), float('inf'))
     tqdm_test_obj = tqdm(test_loader, desc=tqdm_test_descr)
 
     losses = []
+    fake_losses = []
+    real_losses = []
     accuracies = []
-    all_video_filenames = []
+    probabilities = []
+    all_filenames = []
     all_predicted_labels = []
     all_ground_truth_labels = []
     total_samples = 0
@@ -74,28 +89,62 @@ def test_model(model, model_params, criterion, log_dir):
     with torch.no_grad():
         for batch_id, samples in enumerate(tqdm_test_obj):
             # prepare data before passing to model
-            batch_size = len(samples[0])
-            all_video_filenames.extend(samples[0])
-            frames_ = samples[1]
-            frames = torch.stack(frames_).to(device)
-            labels = torch.stack(samples[2]).to(device)
+
+            if model_params['batch_format'] == 'stacked':
+                batch_size = len(samples[0])
+                all_filenames.extend(samples[0])
+                frames_ = samples[1]
+                frames = torch.stack(frames_).to(device)
+                labels = torch.stack(samples[2]).to(device)
+
+            elif model_params['batch_format'] == 'simple':
+
+                frames = samples['frame_tensor'].to(device)
+                # print(f'{idx} | batch_size {batch_size} | frames:{frames.shape}')
+                labels = samples['label'].to(device).unsqueeze(1)
+                batch_size = labels.shape[0]
+                for i in range(batch_size):
+                    all_filenames.append(str(samples['video_id'][i]) + '__' +
+                                         str(samples['frame'][i]))
+            else:
+                raise Exception("model_params['batch_format'] not supported")
 
             output = model(frames)
 
-            batch_loss = criterion(output, labels)
-            batch_loss_val = batch_loss.item()
+            labels = labels.type_as(output)
+            fake_loss = 0
+            real_loss = 0
+            fake_idx = labels > 0.5
+            real_idx = labels <= 0.5
+            if torch.sum(fake_idx * 1) > 0:
+                fake_loss = criterion(output[fake_idx], labels[fake_idx])
+            if torch.sum(real_idx * 1) > 0:
+                real_loss = criterion(output[real_idx], labels[real_idx])
 
-            predicted = get_predictions(output)
+            batch_loss = (fake_loss + real_loss) / 2
+            batch_loss_val = batch_loss.item()
+            real_loss_val = 0 if real_loss == 0 else real_loss.item()
+            fake_loss_val = 0 if fake_loss == 0 else fake_loss.item()
+
+            predicted = get_predictions(output).to('cpu').detach().numpy()
+            class_probability = get_probability(output).to('cpu').detach().numpy()
+
+            labels = labels.to('cpu').detach().numpy()
             batch_corr = (predicted == labels).sum().item()
-            all_predicted_labels.extend(predicted.tolist())
-            all_ground_truth_labels.extend(labels.tolist())
+
+            all_predicted_labels.extend(predicted.squeeze())
+            all_ground_truth_labels.extend(labels.squeeze())
             total_samples += batch_size
             total_correct += batch_corr
             losses.append(batch_loss_val)
+            fake_losses.append(fake_loss_val)
+            real_losses.append(real_loss_val)
             batch_accuracy = batch_corr * 100 / batch_size
             accuracies.append(batch_accuracy)
+            probabilities.extend(class_probability.squeeze())
 
-            tqdm_test_descr = tqdm_test_descr_format.format(batch_accuracy, batch_loss_val)
+            tqdm_test_descr = tqdm_test_descr_format.format(batch_accuracy, batch_loss_val, fake_loss_val,
+                                                            real_loss_val)
             tqdm_test_obj.set_description(tqdm_test_descr)
             tqdm_test_obj.update()
 
@@ -104,5 +153,8 @@ def test_model(model, model_params, criterion, log_dir):
     save_model_results_to_log(model=model, model_params=model_params,
                               losses=losses, accuracies=accuracies,
                               predicted=all_predicted_labels, ground_truth=all_ground_truth_labels,
-                              sample_names=all_video_filenames,
-                              log_dir=log_dir, report_type=report_type)
+                              sample_names=all_filenames,
+                              log_dir=log_dir, report_type=report_type, probabilities=probabilities)
+
+    print(
+        f'Test | mean acc = {np.mean(accuracies)}, total loss = {np.mean(losses)}, fake loss = {np.mean(fake_losses)}, real loss = {np.mean(real_losses)} ')
