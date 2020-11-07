@@ -379,6 +379,8 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
 
         predicted = get_predictions(output).to('cpu').detach().numpy()
         labels = labels.to('cpu').detach().numpy()
+        if model_params['label_smoothing'] != 0:
+            labels = labels.round()
         batch_corr = (predicted == labels).sum().item()
 
         # print(f'Train Predictions = {predicted}')
