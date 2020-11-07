@@ -117,7 +117,8 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                     max_num_frames=model_params['max_num_frames'],
                                     frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'],
                                     expand_label_dim=model_params['expand_label_dim'],
-                                    fill_empty=model_params['fill_empty'])
+                                    fill_empty=model_params['fill_empty'],
+                                    label_smoothing=model_params['label_smoothing'])
         valid_dataset = DFDCDataset(valid_data, mode='valid', transform=valid_transform,
                                     max_num_frames=model_params['max_num_frames'],
                                     frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'],
@@ -131,7 +132,8 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
 
     elif model_params['batch_format'] == 'simple':
         train_dataset = DFDCDatasetSimple(mode='train', transform=train_transform, data_size=get_training_sample_size(),
-                                          dataset=model_params['dataset'])
+                                          dataset=model_params['dataset'],
+                                          label_smoothing=model_params['label_smoothing'])
         valid_dataset = DFDCDatasetSimple(mode='valid', transform=valid_transform, data_size=get_valid_sample_size(),
                                           dataset=model_params['dataset'])
 
@@ -163,7 +165,8 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
     if train_resume_checkpoint is not None:
         saved_epoch, model, optimizer, _, log_dir, amp_dict = load_checkpoint(model, optimizer,
                                                                               train_resume_checkpoint)
-        amp.load_state_dict(amp_dict)
+        if model_params['fp16']:
+            amp.load_state_dict(amp_dict)
         start_epoch = saved_epoch + 1
         print(f'Resuming Training from epoch {start_epoch}')
         if os.path.basename(log_dir) == 'highest_acc' or os.path.basename(log_dir) == 'lowest_loss':
@@ -262,6 +265,10 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
         print(
             f'Validation epoch = {e}, mean acc = {v_epoch_accuracy}, total loss = {v_epoch_loss}, fake loss = {v_epoch_fake_loss},real loss = {v_epoch_real_loss} ')
         print(f'Saving model results at {log_dir} for epoch {e}')
+        if model_params['fp16']:
+            amp_dict = amp.state_dict()
+        else:
+            amp_dict = None
         save_all_model_results(model=model, model_params=model_params,
                                optimizer=optimizer, criterion=criterion.__class__.__name__,
                                train_losses=model_train_losses, train_accuracies=model_train_accuracies,
@@ -269,11 +276,15 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                valid_sample_names=all_filenames,
                                epoch=e, log_dir=log_dir, probabilities=probabilities,
-                               amp_dict=amp.state_dict())
+                               amp_dict=amp_dict)
 
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
             print(f'Saving best model (low loss) results at {log_dir}/lowest_loss for epoch {e}')
+            if model_params['fp16']:
+                amp_dict = amp.state_dict()
+            else:
+                amp_dict = None
             save_all_model_results(model=model, model_params=model_params,
                                    optimizer=optimizer, criterion=criterion.__class__.__name__,
                                    train_losses=model_train_losses, train_accuracies=model_train_accuracies,
@@ -281,11 +292,15 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                    valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                    valid_sample_names=all_filenames,
                                    epoch=e, log_dir=log_dir, log_kind='lowest_loss', probabilities=probabilities,
-                                   amp_dict=amp.state_dict())
+                                   amp_dict=amp_dict)
 
         if highest_v_epoch_acc < v_epoch_accuracy:
             highest_v_epoch_acc = v_epoch_accuracy
             print(f'Saving best model (high acc) results at {log_dir}/highest_acc for epoch {e}')
+            if model_params['fp16']:
+                amp_dict = amp.state_dict()
+            else:
+                amp_dict = None
             save_all_model_results(model=model, model_params=model_params,
                                    optimizer=optimizer, criterion=criterion.__class__.__name__,
                                    train_losses=model_train_losses, train_accuracies=model_train_accuracies,
@@ -293,7 +308,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                    valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                    valid_sample_names=all_filenames,
                                    epoch=e, log_dir=log_dir, log_kind='highest_acc', probabilities=probabilities,
-                                   amp_dict=amp.state_dict())
+                                   amp_dict=amp_dict)
 
     return model, model_params, criterion
 
