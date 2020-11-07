@@ -69,7 +69,7 @@ def extract_faces_from_video(input_videofile, out_dir=None, batch_size=32, detec
         frame = Image.fromarray(frame)
         frames_dict[i] = frame
 
-    result = {}
+    result = OrderedDict()
     batches = list()
     frames = list(frames_dict.values())
     num_frames_detected = len(frames)
