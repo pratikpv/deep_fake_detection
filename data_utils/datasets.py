@@ -10,13 +10,15 @@ from PIL import Image
 
 class DFDCDataset(Dataset):
     def __init__(self, data, mode=None, transform=None, max_num_frames=10, frame_dim=256, random_sorted=False,
-                 device=None, expand_label_dim=False, fill_empty=True):
+                 device=None, expand_label_dim=False, fill_empty=True, label_smoothing=0):
         super().__init__()
         self.data = data
         self.mode = mode
+        self.label_smoothing = 0  # use only in training, so update to param passed in train mode
         if self.mode == 'train':
             self.crops_dir = get_train_crop_faces_data_path()
             self.labels_csv = get_train_labels_csv_filepath()
+            self.label_smoothing = label_smoothing
         elif self.mode == 'valid':
             self.crops_dir = get_valid_crop_faces_data_path()
             self.labels_csv = get_valid_labels_csv_filepath()
@@ -88,6 +90,8 @@ class DFDCDataset(Dataset):
             # TODO:
             # if fill_empty, set labels of these filled frames to real? as there are no faces in this empty frames?
             #
+        if self.label_smoothing != 0:
+            label = np.clip(label, self.label_smoothing, 1 - self.label_smoothing)
         label = torch.tensor(label, dtype=torch.long)
         item = (video_id, frames, label)
         return item
@@ -98,9 +102,10 @@ class DFDCDataset(Dataset):
 
 
 class DFDCDatasetSimple(Dataset):
-    def __init__(self, mode=None, transform=None, data_size=1, dataset=None):
+    def __init__(self, mode=None, transform=None, data_size=1, dataset=None, label_smoothing=0):
         super().__init__()
         self.mode = mode
+        self.label_smoothing = 0  # use only in training, so update to param passed in train mode
         if mode == 'train':
             if dataset == 'plain':
                 self.labels_csv = get_train_frame_label_csv_path()
@@ -110,6 +115,8 @@ class DFDCDatasetSimple(Dataset):
                 self.crops_dir = get_train_optical_png_data_path()
             else:
                 raise Exception('Bad dataset in DFDCDatasetSimple')
+
+            self.label_smoothing = label_smoothing
         elif mode == 'valid':
             if dataset == 'plain':
                 self.labels_csv = get_valid_frame_label_csv_path()
@@ -151,7 +158,11 @@ class DFDCDatasetSimple(Dataset):
                 if self.transform is not None:
                     frame = self.transform(frame)
                 item['frame_tensor'] = frame
-                item['label'] = torch.tensor(item['label'])
+                if self.label_smoothing != 0:
+                    label = np.clip(item['label'], self.label_smoothing, 1 - self.label_smoothing)
+                else:
+                    label = item['label']
+                item['label'] = torch.tensor(label)
                 return item
             except Exception:
                 index = random.randint(0, self.data_len)
