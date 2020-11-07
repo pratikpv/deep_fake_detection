@@ -1,12 +1,6 @@
 import argparse
-
-mode = 'simple'
-if mode == 'simple':
-    from models.simple.training_testing import *
-    from models.simple.testing import *
-else:
-    from models.training_testing import *
-    from models.testing import *
+from models.training_testing import *
+from models.testing import *
 
 
 def main():
