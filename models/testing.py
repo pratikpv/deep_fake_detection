@@ -48,13 +48,13 @@ def test_model(model, model_params, criterion, log_dir, model_kind):
                              std=[0.229, 0.224, 0.225]),
     ])
 
-    num_workers = multiprocessing.cpu_count() - 2
-    # num_workers = 0
+    #num_workers = multiprocessing.cpu_count() - 2
+    num_workers = 0
 
     if model_params['batch_format'] == 'stacked':
         test_dataset = DFDCDataset(test_data, mode='test', transform=test_transform,
                                    max_num_frames=model_params['max_num_frames'],
-                                   frame_dim=model_params['imsize'], expand_label_dim=model_params['expand_label_dim'])
+                                   frame_dim=model_params['imsize'])
 
         test_loader = DataLoader(test_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
                                  collate_fn=my_collate)
@@ -96,12 +96,9 @@ def test_model(model, model_params, criterion, log_dir, model_kind):
                 all_filenames.extend(samples[0])
                 frames_ = samples[1]
                 frames = torch.stack(frames_).to(device)
-                labels = torch.stack(samples[2]).to(device)
-
+                labels = torch.stack(samples[2]).to(device).unsqueeze(1)
             elif model_params['batch_format'] == 'simple':
-
                 frames = samples['frame_tensor'].to(device)
-                # print(f'{idx} | batch_size {batch_size} | frames:{frames.shape}')
                 labels = samples['label'].to(device).unsqueeze(1)
                 batch_size = labels.shape[0]
                 for i in range(batch_size):
@@ -133,8 +130,6 @@ def test_model(model, model_params, criterion, log_dir, model_kind):
             labels = labels.to('cpu').detach().numpy()
             batch_corr = (predicted == labels).sum().item()
 
-            all_predicted_labels.extend(predicted.squeeze())
-            all_ground_truth_labels.extend(labels.squeeze())
             total_samples += batch_size
             total_correct += batch_corr
             losses.append(batch_loss_val)
@@ -142,7 +137,14 @@ def test_model(model, model_params, criterion, log_dir, model_kind):
             real_losses.append(real_loss_val)
             batch_accuracy = batch_corr * 100 / batch_size
             accuracies.append(batch_accuracy)
-            probabilities.extend(class_probability.squeeze())
+            if len(predicted) > 1:
+                all_predicted_labels.extend(predicted.squeeze())
+                all_ground_truth_labels.extend(labels.squeeze())
+                probabilities.extend(class_probability.squeeze())
+            else:
+                all_predicted_labels.append(predicted.squeeze())
+                all_ground_truth_labels.append(labels.squeeze())
+                probabilities.append(class_probability.squeeze())
 
             tqdm_test_descr = tqdm_test_descr_format.format(batch_accuracy, batch_loss_val, fake_loss_val,
                                                             real_loss_val)

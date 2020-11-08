@@ -10,7 +10,7 @@ from PIL import Image
 
 class DFDCDataset(Dataset):
     def __init__(self, data, mode=None, transform=None, max_num_frames=10, frame_dim=256, random_sorted=False,
-                 device=None, expand_label_dim=False, fill_empty=True, label_smoothing=0):
+                 device=None, fill_empty=True, label_smoothing=0):
         super().__init__()
         self.data = data
         self.mode = mode
@@ -34,7 +34,6 @@ class DFDCDataset(Dataset):
         self.max_num_frames = max_num_frames
         self.frame_dim = frame_dim
         self.random_sorted = random_sorted
-        self.expand_label_dim = expand_label_dim
         self.fill_empty = fill_empty
 
     def __len__(self) -> int:
@@ -85,11 +84,6 @@ class DFDCDataset(Dataset):
 
         frames = torch.stack(frames, dim=0)
         label = self.lookup_table[video_filename]
-        if self.expand_label_dim:
-            label = label * np.ones(self.max_num_frames)
-            # TODO:
-            # if fill_empty, set labels of these filled frames to real? as there are no faces in this empty frames?
-            #
         if self.label_smoothing != 0:
             label = np.clip(label, self.label_smoothing, 1 - self.label_smoothing)
         label = torch.tensor(label, dtype=torch.long)

@@ -109,20 +109,18 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225]),
     ])
-    # num_workers = multiprocessing.cpu_count() - 2
+    num_workers = multiprocessing.cpu_count() - 2
     num_workers = 0
 
     if model_params['batch_format'] == 'stacked':
         train_dataset = DFDCDataset(train_data, mode='train', transform=train_transform,
                                     max_num_frames=model_params['max_num_frames'],
                                     frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'],
-                                    expand_label_dim=model_params['expand_label_dim'],
                                     fill_empty=model_params['fill_empty'],
                                     label_smoothing=model_params['label_smoothing'])
         valid_dataset = DFDCDataset(valid_data, mode='valid', transform=valid_transform,
                                     max_num_frames=model_params['max_num_frames'],
                                     frame_dim=model_params['imsize'], random_sorted=model_params['random_sorted'],
-                                    expand_label_dim=model_params['expand_label_dim'],
                                     fill_empty=model_params['fill_empty'])
 
         train_loader = DataLoader(train_dataset, batch_size=model_params['batch_size'], num_workers=num_workers,
@@ -273,7 +271,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                valid_sample_names=all_filenames,
-                               epoch=e, log_dir=log_dir,  log_kind='latest_epoch', probabilities=probabilities,
+                               epoch=e, log_dir=log_dir, log_kind='latest_epoch', probabilities=probabilities,
                                amp_dict=amp_dict)
 
         if v_epoch_loss < lowest_v_epoch_loss:
@@ -330,7 +328,6 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
         tqdm_b_obj = tqdm(data_loader, desc=tqdm_b_descr)
         train_data_iter = tqdm_b_obj
 
-    # print(f'\ntraining epoch : {epoch}\n')
     for batch_id, samples in enumerate(train_data_iter):
         # prepare data before passing to model
         optimizer.zero_grad()
@@ -339,18 +336,15 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
             batch_size = len(samples[0])
             frames_ = samples[1]
             frames = torch.stack(frames_).to(device)
-            # print(f'{idx} | batch_size {batch_size} | frames:{frames.shape}')
-            labels = torch.stack(samples[2]).to(device)
+            labels = torch.stack(samples[2]).to(device).unsqueeze(1)
         elif model_params['batch_format'] == 'simple':
             frames = samples['frame_tensor'].to(device)
-            # print(f'{idx} | batch_size {batch_size} | frames:{frames.shape}')
             labels = samples['label'].to(device).unsqueeze(1)
             batch_size = labels.shape[0]
         else:
             raise Exception("model_params['batch_format'] not supported")
 
         output = model(frames)
-        # print(f'train out= {output}')
         labels = labels.type_as(output)
         fake_loss = 0
         real_loss = 0
@@ -380,10 +374,6 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
         if model_params['label_smoothing'] != 0:
             labels = labels.round()
         batch_corr = (predicted == labels).sum().item()
-
-        # print(f'Train Predictions = {predicted}')
-        # print(f'Train labels = {labels}')
-        # print(f'Train batch_corr = {batch_corr}')
 
         total_samples += batch_size
         total_correct += batch_corr
@@ -437,34 +427,25 @@ def valid_epoch(epoch=None, model=None, criterion=None, data_loader=None, batch_
         tqdm_b_obj = tqdm(data_loader, desc=tqdm_b_descr)
         valid_data_iter = tqdm_b_obj
 
-    # print(f'\nvalid epoch : {epoch}')
     with torch.no_grad():
         for batch_id, samples in enumerate(valid_data_iter):
             # prepare data before passing to model
-
             if model_params['batch_format'] == 'stacked':
-
                 batch_size = len(samples[0])
                 all_filenames.extend(samples[0])
-
                 frames_ = samples[1]
                 frames = torch.stack(frames_).to(device)
-                labels = torch.stack(samples[2]).to(device)
-
+                labels = torch.stack(samples[2]).to(device).unsqueeze(1)
             elif model_params['batch_format'] == 'simple':
-
                 frames = samples['frame_tensor'].to(device)
-                # print(f'{idx} | batch_size {batch_size} | frames:{frames.shape}')
                 labels = samples['label'].to(device).unsqueeze(1)
                 batch_size = labels.shape[0]
                 for i in range(batch_size):
-                    all_filenames.append(str(samples['video_id'][i].item()) + '__' +
-                                         str(samples['frame'][i]))
+                    all_filenames.append(str(samples['video_id'][i].item()) + '__' + str(samples['frame'][i]))
             else:
                 raise Exception("model_params['batch_format'] not supported")
 
             output = model(frames)
-            # print(f'valid out= {output}')
             labels = labels.type_as(output)
             fake_loss = 0
             real_loss = 0
@@ -483,13 +464,10 @@ def valid_epoch(epoch=None, model=None, criterion=None, data_loader=None, batch_
             predicted = get_predictions(output).to('cpu').detach().numpy()
             class_probability = get_probability(output).to('cpu').detach().numpy()
 
+            # print(f'output ={output}')
+            # print(f'class_probability ={class_probability}')
             labels = labels.to('cpu').detach().numpy()
             batch_corr = (predicted == labels).sum().item()
-
-            all_predicted_labels.extend(predicted.squeeze())
-            all_ground_truth_labels.extend(labels.squeeze())
-            # print(f"Valid Predicted: {predicted}")
-            # print(f"Valid Labels: {labels_list}")
 
             total_samples += batch_size
             total_correct += batch_corr
@@ -498,7 +476,14 @@ def valid_epoch(epoch=None, model=None, criterion=None, data_loader=None, batch_
             real_losses.append(real_loss_val)
             batch_accuracy = batch_corr * 100 / batch_size
             accuracies.append(batch_accuracy)
-            probabilities.extend(class_probability.squeeze())
+            if len(predicted) > 1:
+                all_predicted_labels.extend(predicted.squeeze())
+                all_ground_truth_labels.extend(labels.squeeze())
+                probabilities.extend(class_probability.squeeze())
+            else:
+                all_predicted_labels.append(predicted.squeeze())
+                all_ground_truth_labels.append(labels.squeeze())
+                probabilities.append(class_probability.squeeze())
 
             # g_minibatch = global_minibatch_number(epoch, batch_id, batch_size)
             if use_tqdm:
