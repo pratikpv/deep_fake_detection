@@ -36,6 +36,7 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
     model_loss_png = os.path.join(model_log_dir, log_params['model_loss_png'])
     model_accuracy_png = os.path.join(model_log_dir, log_params['model_accuracy_png'])
     all_samples_pred_csv = os.path.join(model_log_dir, log_params['all_samples_pred_csv'])
+    model_roc_png = os.path.join(model_log_dir, log_params['model_roc_png'])
 
     report = None
     if predicted is not None:
@@ -83,6 +84,7 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
         plt.close(fig)
 
         report = metrics.classification_report(ground_truth, predicted, target_names=list(target_class_names))
+        gen_roc(ground_truth, probabilities, model_roc_png)
 
     if losses is not None:
         fig = plt.figure(figsize=(8, 8))
@@ -139,6 +141,8 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
             file.write(report_type + ' classification report' + '\n')
             file.write('-' * log_params['line_len'] + '\n')
             file.write(report + '\n')
+            file.write('-' * log_params['line_len'] + '\n')
+            file.write("roc_auc_score = {}\n".format(roc_auc_score(ground_truth, probabilities)))
             file.write('-' * log_params['line_len'] + '\n')
 
         if report_type == 'Test':
@@ -240,6 +244,25 @@ def pred_strategy(num_fake_frames, num_real_frames, total_number_frames, fake_fr
     return 0
 
 
+def gen_roc(ground_truth, probability, model_roc_png):
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(2):
+        fpr[i], tpr[i], _ = roc_curve(ground_truth, probability)
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    fig = plt.figure()
+    plt.plot(fpr[1], tpr[1])
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic')
+    plt.savefig(model_roc_png)
+    plt.close(fig)
+
+
 def gen_report_for_per_frame_model(per_frame_csv=None, log_dir=None, report_type=None, prob_threshold_fake=0.50,
                                    prob_threshold_real=0.55, fake_fraction=0.10, log_kind=None, model_params=None):
     if not os.path.isfile(per_frame_csv):
@@ -324,25 +347,10 @@ def gen_report_for_per_frame_model(per_frame_csv=None, log_dir=None, report_type
     ground_truth = final_df['ground_truth'].to_numpy()
     probability = final_df['fake_prob'].to_numpy()
 
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-    for i in range(2):
-        fpr[i], tpr[i], _ = roc_curve(ground_truth, probability)
-        roc_auc[i] = auc(fpr[i], tpr[i])
-
-    plt.figure()
-    plt.plot(fpr[1], tpr[1])
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver operating characteristic')
-    plt.savefig(model_roc_png)
-
     misc = "prob_threshold_fake = {}\nprob_threshold_real = {}\nfake_fraction = {}\n".format(prob_threshold_fake,
                                                                                              prob_threshold_real,
                                                                                              fake_fraction)
+    gen_roc(ground_truth, probability, model_roc_png)
     with open(model_log_file, 'w') as file:
         if report is not None:
             file.write(report_type + ' classification report' + '\n')
