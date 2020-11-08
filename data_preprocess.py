@@ -20,6 +20,7 @@ import numpy as np
 from data_utils.datasets import DFDCDataset
 from torch.utils.data import DataLoader
 from pathlib import Path
+from tqdm import tqdm
 
 
 def test_data_augmentation(input_file, output_folder):
@@ -767,6 +768,21 @@ def main():
         print('Count faces detected in test dataset')
         count_faces_detected(get_test_crop_faces_data_path(), get_test_facecount_csv_filepath())
 
+    if args.clean_up_logs:
+        config = load_config()
+        log_root_dir = os.path.join(config['logging']['root_log_dir'])
+        logs_to_keep = ["07-Nov-2020_23_24_15", "11-Oct-2020_00_23_16", "11-Oct-2020_19_01_10", "11-Oct-2020_21_48_48",
+                        "12-Oct-2020_08_27_15", "11-Oct-2020_21_48_48", "31-Oct-2020_11_49_23", "26-Oct-2020_22_57_36"
+                        ]
+
+        all_log_dirs = glob(log_root_dir + "/*")
+        for log_d in tqdm(all_log_dirs, desc="Cleaning up logs"):
+            log_base = os.path.basename(log_d)
+            if log_base not in logs_to_keep:
+                pass
+                # keep commented for now, to avoid accidentally running it :)
+                #shutil.rmtree(log_d)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data pre-processing for DFDC')
@@ -822,6 +838,9 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--count_faces', action='store_true',
                         help='Generate csv with count of faces detected in each sample',
+                        default=False)
+    parser.add_argument('--clean_up_logs', action='store_true',
+                        help='Clean up log dir to save disk space',
                         default=False)
 
     args = parser.parse_args()
