@@ -69,7 +69,6 @@ class DFDCDataset(Dataset):
                 image = Image.open(f)
                 if self.transform is not None:
                     image = self.transform(image)
-                    # print(f.shape)
                 frames.append(image)
 
             if self.fill_empty:
@@ -86,7 +85,7 @@ class DFDCDataset(Dataset):
         label = self.lookup_table[video_filename]
         if self.label_smoothing != 0:
             label = np.clip(label, self.label_smoothing, 1 - self.label_smoothing)
-        label = torch.tensor(label, dtype=torch.long)
+        label = torch.tensor(label)
         item = (video_id, frames, label)
         return item
 
