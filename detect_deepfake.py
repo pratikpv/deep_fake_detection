@@ -1,5 +1,5 @@
 import argparse
-from models.training_testing import *
+from models.training import *
 from models.testing import *
 
 
