@@ -4,6 +4,9 @@ import torch.nn as nn
 
 
 class DeepFakeDetectModel_1(nn.Module):
+    """
+    Dummy model. does nothing much, just for testing.
+    """
     def __init__(self, frame_dim=None):
         super().__init__()
         self.frame_dim = frame_dim

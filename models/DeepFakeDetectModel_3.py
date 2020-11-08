@@ -8,6 +8,35 @@ import torch.nn.functional as F
 
 
 class DeepFakeDetectModel_3(nn.Module):
+    """
+    A custom CNN, uses one frame from the video, expects DFDCDataset for dataset
+
+    Param choices in config.yml:
+
+    cnn_encoder:
+      default: 'tf_efficientnet_b0_ns' # Do not change. Not used
+    training:
+      train_size: 1
+      valid_size: 1
+      test_size: 1
+      params:
+        model_name: 'DeepFakeDetectModel_3'
+        label_smoothing: 0.1 # 0 to disable this, or any value less than 1
+        train_transform: ['simple', 'complex'] # choose either of the data augmentation
+        batch_format: 'stacked' # Do not change
+        # Adjust epochs, learning_rate, batch_size , fp16, opt_level
+        epochs: 5
+        learning_rate: 0.001
+        batch_size: 4
+        fp16: True
+        opt_level: 'O1'
+        dataset: ['optical', 'plain'] # choose either of the data type
+        random_sorted: [True, False] # when True: a random frame is selected, when False: frame num#0 is selected.
+        fill_empty: False # Do not change. Not used
+        max_num_frames: 1 # Do not change. Not used
+
+    """
+
     def __init__(self, frame_dim=None):
         super().__init__()
         self.image_dim = frame_dim
@@ -62,6 +91,8 @@ class DeepFakeDetectModel_3(nn.Module):
         batch_size = x.shape[0]
         num_frames = x.shape[1]
         # there is only one frame expected in this model, so squeeze the num_frames dim
+        if num_frames != 1:
+            raise Exception("Number of frames expected one only in DeepFakeDetectModel_3")
         x = torch.squeeze(x, dim=1)
         x = self.features(x)
         x = x.view(batch_size, -1)
