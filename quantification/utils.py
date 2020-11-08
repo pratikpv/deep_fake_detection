@@ -29,7 +29,6 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
     model_log_file = os.path.join(model_log_dir, log_params['model_info_log'])
     model_train_losses_log_file = os.path.join(model_log_dir, log_params['model_loss_info_log'])
     model_train_accuracy_log_file = os.path.join(model_log_dir, log_params['model_acc_info_log'])
-    model_save_path = os.path.join(model_log_dir, model_name + '.pt')
     model_conf_mat_csv = os.path.join(model_log_dir, log_params['model_conf_matrix_csv'])
     model_conf_mat_png = os.path.join(model_log_dir, log_params['model_conf_matrix_png'])
     model_conf_mat_normalized_csv = os.path.join(model_log_dir, log_params['model_conf_matrix_normalized_csv'])
@@ -87,9 +86,12 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
 
     if losses is not None:
         fig = plt.figure(figsize=(8, 8))
-        plt.plot(losses, label='Loss')
+        plt.plot(losses, label='Loss', marker='o')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
+        plt.xlim(0, model_params['epochs'] + 1)
+        max_loss = np.max(losses)
+        plt.ylim(0, max_loss + 0.20 * max_loss)
         plt.title(report_type + ' Loss')
         plt.legend()
         plt.savefig(model_loss_png)
@@ -102,9 +104,11 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
 
     if accuracies is not None:
         fig = plt.figure(figsize=(8, 8))
-        plt.plot(accuracies, label='Accuracy')
+        plt.plot(accuracies, label='Accuracy', marker='o')
         plt.xlabel('Epoch')
         plt.ylabel('Accuracy')
+        plt.xlim(0, model_params['epochs'] + 1)
+        plt.ylim(0, 100)
         plt.title(report_type + ' Accuracy')
         plt.legend()
         plt.savefig(model_accuracy_png)
@@ -149,11 +153,11 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
     if model_params['batch_format'] == 'simple':
         gen_report_for_per_frame_model(per_frame_csv=all_samples_pred_csv, log_dir=log_dir, report_type=report_type,
                                        prob_threshold_fake=0.60, prob_threshold_real=0.60, fake_fraction=0.30,
-                                       log_kind=log_kind)
+                                       log_kind=log_kind, model_params=model_params)
 
         gen_report_for_per_frame_model(per_frame_csv=all_samples_pred_csv, log_dir=log_dir, report_type=report_type,
                                        prob_threshold_fake=0.50, prob_threshold_real=0.60, fake_fraction=0.50,
-                                       log_kind=log_kind)
+                                       log_kind=log_kind, model_params=model_params)
 
     copy_config(dest=model_log_dir)
     sys.stdout.flush()
@@ -176,7 +180,8 @@ def save_all_model_results(model=None, model_params=None, train_losses=None, tra
                               log_dir=log_dir, log_kind=log_kind, report_type=report_type, probabilities=probabilities)
 
     save_checkpoint(epoch=epoch, model=model, model_params=model_params,
-                    optimizer=optimizer, criterion=criterion.__class__.__name__, log_dir=log_dir, amp_dict=amp_dict)
+                    optimizer=optimizer, criterion=criterion, log_dir=log_dir, log_kind=log_kind,
+                    amp_dict=amp_dict)
 
 
 def get_per_video_stat(df, vid, prob_threshold_fake, prob_threshold_real):
@@ -236,7 +241,7 @@ def pred_strategy(num_fake_frames, num_real_frames, total_number_frames, fake_fr
 
 
 def gen_report_for_per_frame_model(per_frame_csv=None, log_dir=None, report_type=None, prob_threshold_fake=0.50,
-                                   prob_threshold_real=0.55, fake_fraction=0.10, log_kind=None):
+                                   prob_threshold_real=0.55, fake_fraction=0.10, log_kind=None, model_params=None):
     if not os.path.isfile(per_frame_csv):
         return
     df = pd.read_csv(per_frame_csv)
@@ -259,11 +264,11 @@ def gen_report_for_per_frame_model(per_frame_csv=None, log_dir=None, report_type
                                    ignore_index=True)
 
     log_params = get_log_params()
+
     model_sub_dir = 'video_classi_' + str(prob_threshold_fake) + '_' + \
                     str(prob_threshold_real) + '_' + str(fake_fraction)
-    if log_kind:
-        model_sub_dir = os.path.join(log_kind, model_sub_dir)
-    model_log_dir = os.path.join(log_dir, model_sub_dir, report_type)
+
+    model_log_dir = os.path.join(log_dir, log_kind, model_params['model_name'], report_type, model_sub_dir)
     os.makedirs(model_log_dir, exist_ok=True)
 
     model_conf_mat_csv = os.path.join(model_log_dir, log_params['model_conf_matrix_csv'])

@@ -389,3 +389,11 @@ def get_number_of_faces_detected(crops_id_path):
     face_id_list.append(0)
     num_faces = max(face_id_list)
     return {'video_id': cid, 'num_faces': num_faces}
+
+
+def print_green(text):
+    """
+    print text in green color
+    @param text: text to print
+    """
+    print('\033[32m', text, '\033[0m', sep='')

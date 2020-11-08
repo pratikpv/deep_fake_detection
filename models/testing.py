@@ -17,7 +17,7 @@ from features.encoders import *
 from models.utils import *
 
 
-def test_model(model, model_params, criterion, log_dir):
+def test_model(model, model_params, criterion, log_dir, model_kind):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -69,7 +69,8 @@ def test_model(model, model_params, criterion, log_dir):
 
     print(f"Batch_size {model_params['batch_size']}")
 
-    tqdm_test_descr_format = "Testing model: Test acc = {:02.4f}%, Mean test loss = {:.8f} fl = {:.8f} rl = {:.8f}"
+    tqdm_test_descr_format = "Testing [Acc={:02.4f}% |Loss Total={:.8f}, Fake={:.8f}, Real={:.8f}]"
+
     tqdm_test_descr = tqdm_test_descr_format.format(0, float('inf'), float('inf'), float('inf'))
     tqdm_test_obj = tqdm(test_loader, desc=tqdm_test_descr)
 
@@ -154,7 +155,8 @@ def test_model(model, model_params, criterion, log_dir):
                               losses=losses, accuracies=accuracies,
                               predicted=all_predicted_labels, ground_truth=all_ground_truth_labels,
                               sample_names=all_filenames,
-                              log_dir=log_dir, report_type=report_type, probabilities=probabilities)
+                              log_dir=log_dir, log_kind=model_kind, report_type=report_type,
+                              probabilities=probabilities)
 
-    print(
-        f'Test | mean acc = {np.mean(accuracies)}, total loss = {np.mean(losses)}, fake loss = {np.mean(fake_losses)}, real loss = {np.mean(real_losses)} ')
+    print_green(
+        f'Test | Acc={np.mean(accuracies)}, Total Loss={np.mean(losses)}, Fake Loss={np.mean(fake_losses)}, Real Loss={np.mean(real_losses)}')

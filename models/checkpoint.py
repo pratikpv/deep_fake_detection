@@ -5,9 +5,9 @@ import pickle
 
 
 def save_checkpoint(epoch=None, model=None, model_params=None,
-                    optimizer=None, criterion=None, log_dir=None, amp_dict=None):
+                    optimizer=None, criterion=None, log_dir=None, log_kind=None, amp_dict=None):
     model_class_name = type(model).__name__
-    checkpoint_root_path = log_dir
+    checkpoint_root_path = os.path.join(log_dir, log_kind)
     os.makedirs(checkpoint_root_path, exist_ok=True)
     check_point_path = os.path.join(checkpoint_root_path, model_class_name + '.chkpt')
 

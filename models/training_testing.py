@@ -193,7 +193,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
     else:
         print(f'Starting training from scratch')
 
-    tqdm_train_descr_format = "Training|train acc={:02.4f}%, tl={:.8f} fl={:.8f} rl={:.8f}|valid acc={:02.4f}%, tl={:.8f} fl={:.8f} rl={:.8f}"
+    tqdm_train_descr_format = "Training[Train Acc={:02.4f}%|Loss Total={:.8f} Fake={:.8f} Real={:.8f}][Val Acc={:02.4f}%|Loss Total={:.8f} Fake={:.8f} Real={:.8f}]"
     tqdm_train_descr = tqdm_train_descr_format.format(0, float('inf'), float('inf'), float('inf'), 0, float('inf'),
                                                       float('inf'), float('inf'))
     tqdm_train_obj = tqdm(range(model_params['epochs']), desc=tqdm_train_descr)
@@ -232,9 +232,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
         train_writer.add_scalar('Training: real loss per epoch', t_epoch_real_loss, e)
         train_writer.add_scalar('Training: accuracy per epoch', t_epoch_accuracy, e)
 
-        print(
-            f'Training epoch = {e}, mean acc = {t_epoch_accuracy}, total loss = {t_epoch_loss}, fake loss = {t_epoch_fake_loss},real loss = {t_epoch_real_loss} ')
-
+        print_green(tqdm_descr)
         v_epoch_accuracy, v_epoch_loss, v_epoch_fake_loss, \
         v_epoch_real_loss, all_predicted_labels, \
         all_ground_truth_labels, all_filenames, \
@@ -262,9 +260,9 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
         train_writer.add_scalar('Validation: fake loss per epoch', v_epoch_fake_loss, e)
         train_writer.add_scalar('Validation: real loss per epoch', v_epoch_real_loss, e)
         train_writer.add_scalar('Validation: accuracy per epoch', v_epoch_accuracy, e)
-        print(
-            f'Validation epoch = {e}, mean acc = {v_epoch_accuracy}, total loss = {v_epoch_loss}, fake loss = {v_epoch_fake_loss},real loss = {v_epoch_real_loss} ')
-        print(f'Saving model results at {log_dir} for epoch {e}')
+
+        print_green(tqdm_descr)
+        print(f'Saving model results at {log_dir}/latest_epoch for epoch {e}')
         if model_params['fp16']:
             amp_dict = amp.state_dict()
         else:
@@ -275,12 +273,12 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                valid_losses=model_valid_losses, valid_accuracies=model_valid_accuracies,
                                valid_predicted=all_predicted_labels, valid_ground_truth=all_ground_truth_labels,
                                valid_sample_names=all_filenames,
-                               epoch=e, log_dir=log_dir, probabilities=probabilities,
+                               epoch=e, log_dir=log_dir,  log_kind='latest_epoch', probabilities=probabilities,
                                amp_dict=amp_dict)
 
         if v_epoch_loss < lowest_v_epoch_loss:
             lowest_v_epoch_loss = v_epoch_loss
-            print(f'Saving best model (low loss) results at {log_dir}/lowest_loss for epoch {e}')
+            print_green(f'Saving best model (low loss) results at {log_dir}/lowest_loss for epoch {e}')
             if model_params['fp16']:
                 amp_dict = amp.state_dict()
             else:
@@ -296,7 +294,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
 
         if highest_v_epoch_acc < v_epoch_accuracy:
             highest_v_epoch_acc = v_epoch_accuracy
-            print(f'Saving best model (high acc) results at {log_dir}/highest_acc for epoch {e}')
+            print_green(f'Saving best model (high acc) results at {log_dir}/highest_acc for epoch {e}')
             if model_params['fp16']:
                 amp_dict = amp.state_dict()
             else:
@@ -310,7 +308,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                                    epoch=e, log_dir=log_dir, log_kind='highest_acc', probabilities=probabilities,
                                    amp_dict=amp_dict)
 
-    return model, model_params, criterion
+    return model, model_params, criterion, log_dir
 
 
 def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loader=None, batch_size=None, device=None,
@@ -326,7 +324,7 @@ def train_epoch(epoch=None, model=None, criterion=None, optimizer=None, data_loa
 
     train_data_iter = data_loader
     if use_tqdm:
-        tqdm_b_descr_format = "Training. Batch# {:05} Accuracy = {:02.4f}%, Loss = {:.8f} fl = {:.8f} rl = {:.8f}"
+        tqdm_b_descr_format = "Training. Batch# {:05} Acc={:02.4f}%|Loss Total={:.8f} Fake={:.8f} Real={:.8f}"
         g_minibatch = global_minibatch_number(epoch, 0, train_loader_len)
         tqdm_b_descr = tqdm_b_descr_format.format(g_minibatch, 0, float('inf'), float('inf'), float('inf'))
         tqdm_b_obj = tqdm(data_loader, desc=tqdm_b_descr)
@@ -433,7 +431,7 @@ def valid_epoch(epoch=None, model=None, criterion=None, data_loader=None, batch_
 
     valid_data_iter = data_loader
     if use_tqdm:
-        tqdm_b_descr_format = "Validation. Batch# {:05} Accuracy = {:02.4f}%, Loss = {:.8f} fl = {:.8f} rl = {:.8f}"
+        tqdm_b_descr_format = "Validation. Batch# {:05} Acc={:02.4f}%|Loss Total={:.8f} Fake={:.8f} Real={:.8f}"
         g_minibatch = global_minibatch_number(epoch, 0, valid_loader_len)
         tqdm_b_descr = tqdm_b_descr_format.format(g_minibatch, 0, float('inf'), float('inf'), float('inf'))
         tqdm_b_obj = tqdm(data_loader, desc=tqdm_b_descr)
