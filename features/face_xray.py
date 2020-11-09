@@ -29,7 +29,7 @@ def gen_xray(image1_path, image2_path, xray_path, res=(224, 224)):
     cv2.imwrite(xray_path, xray)
 
 
-def gen_xray_per_folder(folder1, folder2, xray_basedir, overwrite=False):
+def gen_xray_per_folder(folder1, folder2, xray_basedir, overwrite=True):
     """
 
     :param folder1_path: real images
@@ -37,7 +37,7 @@ def gen_xray_per_folder(folder1, folder2, xray_basedir, overwrite=False):
     :param xray_basedir:
     :return:
     """
-    results_dict = {}
+    results = []
     folder1_path = os.path.join(get_train_crop_faces_data_path(), folder1)
     folder2_path = os.path.join(get_train_crop_faces_data_path(), folder2)
     dest_folder = os.path.join(xray_basedir, os.path.basename(folder2_path))
@@ -52,8 +52,8 @@ def gen_xray_per_folder(folder1, folder2, xray_basedir, overwrite=False):
         if os.path.isfile(f2_file):
             xray_path = os.path.join(dest_folder, f1_file_base)
             gen_xray(f1_file, f2_file, xray_path)
-            results_dict.update({'real_image': f1_file,
-                                 'fake_image': f2_file,
-                                 'xray_image': xray_path})
+            results.append({'real_image': f1_file,
+                            'fake_image': f2_file,
+                            'xray_image': xray_path})
 
-    return results_dict
+    return results

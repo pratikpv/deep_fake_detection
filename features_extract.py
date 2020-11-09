@@ -58,6 +58,7 @@ def generate_optical_flow_data_batch(crop_faces_data_path, optical_flow_data_pat
 
 def generate_xray_batch_dfdc():
     pairs = get_training_original_with_fakes(get_train_data_path())
+    pairs = pairs[0:10]
     pairs_len = len(pairs)
     xray_basedir = get_xray_path()
     csv_file = get_xray_metadata_csv()
@@ -79,7 +80,8 @@ def generate_xray_batch_dfdc():
 
     for r in tqdm(results, desc='Consolidating results'):
         if r is not None:
-            df = df.append(r, ignore_index=True)
+            for item in r:
+                df = df.append(item, ignore_index=True)
 
     df.set_index('real_image', inplace=True)
     if os.path.isfile(csv_file):
