@@ -1,7 +1,8 @@
 import argparse
-from models.training_testing import *
+from models.training import *
 from data_utils.utils import *
 from features.utils import *
+from features.face_xray import *
 from utils import *
 from features.encoders import DeepFakeEncoder
 from datetime import datetime
@@ -41,7 +42,7 @@ def generate_optical_flow_data_batch(crop_faces_data_path, optical_flow_data_pat
 
     video_ids_path = glob(crop_faces_data_path + "/*")
     video_ids_len = len(video_ids_path)
-    with multiprocessing.Pool(2) as pool:
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         results = []
         for vidx in tqdm(range(video_ids_len), desc="Scheduling jobs"):
@@ -53,6 +54,38 @@ def generate_optical_flow_data_batch(crop_faces_data_path, optical_flow_data_pat
 
         for job in tqdm(jobs, desc="Generating optical flow data"):
             results.append(job.get())
+
+
+def generate_xray_batch_dfdc():
+    pairs = get_training_original_with_fakes(get_train_data_path())
+    pairs_len = len(pairs)
+    xray_basedir = get_xray_path()
+    csv_file = get_xray_metadata_csv()
+    print(f'Train Crops dir {get_train_crop_faces_data_path()}')
+    print(f'Xray data dir {xray_basedir}')
+    print(f'Xray metadata csv {csv_file}')
+
+    results = []
+    df = pd.DataFrame(columns=['real_image', 'fake_image', 'xray_image'])
+
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+        jobs = []
+        for pid in tqdm(range(pairs_len), desc="Scheduling jobs"):
+            item = pairs[pid]
+            jobs.append(pool.apply_async(gen_xray_per_folder, (item[0], item[1], xray_basedir,)))
+
+        for job in tqdm(jobs, desc="Generating xrays"):
+            results.append(job.get())
+
+    for r in tqdm(results, desc='Consolidating results'):
+        if r is not None:
+            df = df.append(r, ignore_index=True)
+
+    df.set_index('real_image', inplace=True)
+    if os.path.isfile(csv_file):
+        df.to_csv(csv_file, mode='a', header=False)
+    else:
+        df.to_csv(csv_file)
 
 
 def main():
@@ -75,6 +108,10 @@ def main():
         generate_optical_flow_data_batch(get_test_crop_faces_data_path(), get_test_optical_flow_data_path(),
                                          get_test_optical_png_data_path())
 
+    if args.gen_xray:
+        print('Generating face x-ray')
+        generate_xray_batch_dfdc()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract features from DFDC')
@@ -85,6 +122,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--gen_optic_data', action='store_true',
                         help='Generate optical flow data',
+                        default=False)
+
+    parser.add_argument('--gen_xray', action='store_true',
+                        help='Generate xray',
                         default=False)
 
     args = parser.parse_args()
