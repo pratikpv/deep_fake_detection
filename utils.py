@@ -164,6 +164,11 @@ def get_test_json_faces_data_path():
     return config['features']['test_json_faces']
 
 
+def get_xray_metadata_csv():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['features']['xray_metadata_csv'])
+
+
 def get_train_crop_faces_data_path():
     config = load_config()
     return config['features']['train_crop_faces']
@@ -256,6 +261,11 @@ def get_valid_sample_size():
 def get_test_sample_size():
     config = load_config()
     return float(config['training']['test_size'])
+
+
+def get_xray_path():
+    config = load_config()
+    return config['features']['train_xray_png']
 
 
 def get_checkpoint_root_path():
