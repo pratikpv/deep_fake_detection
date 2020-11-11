@@ -110,7 +110,7 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
                              std=[0.229, 0.224, 0.225]),
     ])
     num_workers = multiprocessing.cpu_count() - 2
-    num_workers = 0
+    # num_workers = 0
 
     if model_params['batch_format'] == 'stacked':
         train_dataset = DFDCDataset(train_data, mode='train', transform=train_transform,
@@ -172,8 +172,9 @@ def train_model(log_dir=None, train_resume_checkpoint=None):
 
         print(f'Resetting log_dir to {log_dir}')
 
+        model_type = train_resume_checkpoint.split('/')[-2]
         model_train_accuracies, model_train_losses, model_valid_accuracies, \
-        model_valid_losses = load_acc_loss(model, log_dir)
+        model_valid_losses = load_acc_loss(model, log_dir, model_type)
 
         if len(model_train_accuracies) != start_epoch:
             raise Exception(
