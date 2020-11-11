@@ -37,24 +37,27 @@ def load_checkpoint(model=None, optimizer=None, check_point_path=None):
            check_point_dict['log_dir'], check_point_dict['amp']
 
 
-def load_acc_loss(model=None, log_dir=None):
+def load_acc_loss(model=None, log_dir=None, model_type=None):
     model_class_name = type(model).__name__
     log_params = get_log_params()
 
     report_type = 'Train'
-    model_log_dir = os.path.join(log_dir, model_class_name, report_type)
+    model_log_dir = os.path.join(log_dir, model_type, model_class_name, report_type)
     model_train_losses_log_file = os.path.join(model_log_dir, log_params['model_loss_info_log'])
     model_train_accuracy_log_file = os.path.join(model_log_dir, log_params['model_acc_info_log'])
-
+    print(f'model_train_losses_log_file {model_train_losses_log_file}')
+    print(f'model_train_accuracy_log_file {model_train_accuracy_log_file}')
     with open(model_train_losses_log_file, 'rb') as file:
         train_losses = pickle.load(file)
     with open(model_train_accuracy_log_file, 'rb') as file:
         train_accs = pickle.load(file)
 
     report_type = 'Validation'
-    model_log_dir = os.path.join(log_dir, model_class_name, report_type)
+    model_log_dir = os.path.join(log_dir, model_type, model_class_name, report_type)
     model_valid_losses_log_file = os.path.join(model_log_dir, log_params['model_loss_info_log'])
     model_valid_accuracy_log_file = os.path.join(model_log_dir, log_params['model_acc_info_log'])
+    print(f'model_valid_losses_log_file {model_valid_losses_log_file}')
+    print(f'model_valid_accuracy_log_file {model_valid_accuracy_log_file}')
     with open(model_valid_losses_log_file, 'rb') as file:
         valid_losses = pickle.load(file)
     with open(model_valid_accuracy_log_file, 'rb') as file:
