@@ -12,7 +12,7 @@ from models.checkpoint import *
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 
 
-def save_model_results_to_log(model=None, model_params=None, losses=None, accuracies=None, predicted=None,
+def save_model_results_to_log(epoch=0, model=None, model_params=None, losses=None, accuracies=None, predicted=None,
                               ground_truth=None, misc_data=None, sample_names=None, log_dir=None, log_kind=None,
                               report_type=None, probabilities=None):
     log_params = get_log_params()
@@ -91,7 +91,7 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
         plt.plot(losses, label='Loss', marker='o')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
-        plt.xlim(0, model_params['epochs'] + 1)
+        plt.xlim(0, epoch + 2)
         max_loss = np.max(losses)
         plt.ylim(0, max_loss + 0.20 * max_loss)
         plt.title(report_type + ' Loss')
@@ -109,7 +109,7 @@ def save_model_results_to_log(model=None, model_params=None, losses=None, accura
         plt.plot(accuracies, label='Accuracy', marker='o')
         plt.xlabel('Epoch')
         plt.ylabel('Accuracy')
-        plt.xlim(0, model_params['epochs'] + 1)
+        plt.xlim(0, epoch + 2)
         plt.ylim(0, 100)
         plt.title(report_type + ' Accuracy')
         plt.legend()
@@ -172,12 +172,12 @@ def save_all_model_results(model=None, model_params=None, train_losses=None, tra
                            valid_sample_names=None, optimizer=None, criterion=None, epoch=0, log_dir=None,
                            log_kind=None, probabilities=None, amp_dict=None):
     report_type = 'Train'
-    save_model_results_to_log(model=model, model_params=model_params,
+    save_model_results_to_log(epoch=epoch,model=model, model_params=model_params,
                               losses=train_losses, accuracies=train_accuracies,
                               log_dir=log_dir, log_kind=log_kind, report_type=report_type)
 
     report_type = 'Validation'
-    save_model_results_to_log(model=model, model_params=model_params,
+    save_model_results_to_log(epoch=epoch,model=model, model_params=model_params,
                               losses=valid_losses, accuracies=valid_accuracies,
                               predicted=valid_predicted, ground_truth=valid_ground_truth,
                               sample_names=valid_sample_names,
