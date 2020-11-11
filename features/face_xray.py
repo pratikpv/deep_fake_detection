@@ -14,6 +14,7 @@ import random
 from glob import glob
 from imutils import face_utils
 from utils import *
+import pandas as pd
 
 
 def gen_xray(image1_path, image2_path, xray_path, res=(224, 224)):
@@ -25,19 +26,20 @@ def gen_xray(image1_path, image2_path, xray_path, res=(224, 224)):
     d, a = compare_ssim(image1, image2, multichannel=True, full=True)
     a = 1 - a
     xray = (a * 255).astype(np.uint8)
-    xray = cv2.cvtColor(xray, cv2.COLOR_BGR2GRAY)
+    # xray = cv2.cvtColor(xray, cv2.COLOR_BGR2GRAY)
+    # xray = cv2.cvtColor(xray, cv2.COLOR_BGR2RGB)
     cv2.imwrite(xray_path, xray)
 
 
 def gen_xray_per_folder(folder1, folder2, xray_basedir, overwrite=True):
     """
 
-    :param folder1_path: real images
-    :param folder2_path: fake images
-    :param xray_basedir:
+    :param folder1: real images
+    :param folder2: fake images
+    :param xray_basedir: 
+    :param overwrite:
     :return:
     """
-    results = []
     folder1_path = os.path.join(get_train_crop_faces_data_path(), folder1)
     folder2_path = os.path.join(get_train_crop_faces_data_path(), folder2)
     dest_folder = os.path.join(xray_basedir, os.path.basename(folder2_path))
@@ -45,15 +47,15 @@ def gen_xray_per_folder(folder1, folder2, xray_basedir, overwrite=True):
         return None
     f1_all_files = glob(folder1_path + "/*")
     os.makedirs(dest_folder, exist_ok=True)
-
+    df = pd.DataFrame(columns=['real_image', 'fake_image', 'xray_image'])
     for f1_file in f1_all_files:
         f1_file_base = os.path.basename(f1_file)
         f2_file = os.path.join(folder2_path, f1_file_base)
         if os.path.isfile(f2_file):
             xray_path = os.path.join(dest_folder, f1_file_base)
             gen_xray(f1_file, f2_file, xray_path)
-            results.append({'real_image': f1_file,
-                            'fake_image': f2_file,
-                            'xray_image': xray_path})
-
-    return results
+            item = {'real_image': f1_file,
+                    'fake_image': f2_file,
+                    'xray_image': xray_path}
+            df = df.append(item, ignore_index=True)
+    return df
