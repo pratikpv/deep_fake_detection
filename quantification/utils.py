@@ -69,7 +69,7 @@ def save_model_results_to_log(epoch=0, model=None, model_params=None, losses=Non
         plt.savefig(model_conf_mat_png)
         plt.close(fig)
 
-        cm = metrics.confusion_matrix(ground_truth, predicted, normalize='all')
+        cm = metrics.confusion_matrix(ground_truth, predicted, normalize='true')
         df_confusion = pd.DataFrame(cm)
         df_confusion.index = target_class_names
         df_confusion.columns = target_class_names
@@ -327,7 +327,7 @@ def gen_report_for_per_frame_model(per_frame_csv=None, log_dir=None, report_type
     plt.savefig(model_conf_mat_png)
     plt.close(fig)
 
-    cm = metrics.confusion_matrix(final_df['ground_truth'], final_df['prediction'], normalize='all')
+    cm = metrics.confusion_matrix(final_df['ground_truth'], final_df['prediction'], normalize='true')
     df_confusion = pd.DataFrame(cm)
     df_confusion.index = target_class_names
     df_confusion.columns = target_class_names
