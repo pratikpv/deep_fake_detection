@@ -169,6 +169,21 @@ def get_xray_metadata_csv():
     return os.path.join(get_assets_path(), config['features']['xray_metadata_csv'])
 
 
+def get_xray_pairs_train_csv():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['features']['xray_pairs_train_csv'])
+
+
+def get_xray_pairs_test_csv():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['features']['xray_pairs_test_csv'])
+
+
+def get_blank_imagepath():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['features']['blank_png'])
+
+
 def get_train_crop_faces_data_path():
     config = load_config()
     return config['features']['train_crop_faces']
