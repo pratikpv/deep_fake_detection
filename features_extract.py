@@ -6,6 +6,7 @@ from features.face_xray import *
 from utils import *
 from features.encoders import DeepFakeEncoder
 from datetime import datetime
+from sklearn.model_selection import train_test_split
 
 
 def generate_cnn_video_encodings_main(crops_dir, features_dir):
@@ -88,6 +89,29 @@ def generate_xray_batch_dfdc():
         df.to_csv(csv_file)
 
 
+def generate_xray_pairs_dfdc(metadata_csv, pairs_train_csv, pairs_test_csv):
+    dfm = pd.read_csv(metadata_csv)
+
+    dff = pd.DataFrame(columns=['face_image', 'xray_image', 'class'])
+    dff['face_image'] = dfm['fake_image']
+    dff['xray_image'] = dfm['xray_image']
+    dff_len = len(dff)
+    dff['class'][0:dff_len] = 'fake'
+
+    dfr = pd.DataFrame(columns=['face_image', 'xray_image', 'class'])
+    dfr['face_image'] = dfm['real_image']
+    dfr['xray_image'] = os.path.abspath(get_blank_imagepath())
+    dfr_len = len(dfr)
+    dfr['class'][0:dfr_len] = 'real'
+
+    df = pd.concat([dff, dfr])
+    df = df.set_index('face_image')
+
+    train, test = train_test_split(df, test_size=0.2)
+    train.to_csv(pairs_train_csv)
+    test.to_csv(pairs_test_csv)
+
+
 def main():
     if args.encode_video_frames:
         print('Encoding video frames for training data')
@@ -112,6 +136,11 @@ def main():
         print('Generating face x-ray')
         generate_xray_batch_dfdc()
 
+    if args.gen_xray_pairs:
+        print('Generating x-ray pairs')
+        # generate csv with [face_image, xray_image] as columns using xray metadata cvs.
+        generate_xray_pairs_dfdc(get_xray_metadata_csv(), get_xray_pairs_train_csv(), get_xray_pairs_test_csv())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract features from DFDC')
@@ -126,6 +155,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--gen_xray', action='store_true',
                         help='Generate xray',
+                        default=False)
+
+    parser.add_argument('--gen_xray_pairs', action='store_true',
+                        help='Generate pairs for xray dataset',
                         default=False)
 
     args = parser.parse_args()
