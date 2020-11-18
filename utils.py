@@ -93,6 +93,19 @@ def get_test_optframe_label_csv_path():
     config = load_config()
     return os.path.join(get_assets_path(), config['data_path']['test_optframe_label'])
 
+def get_train_mriframe_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['train_mriframe_label'])
+
+
+def get_valid_mriframe_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['valid_mriframe_label'])
+
+
+def get_test_mriframe_label_csv_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['data_path']['test_mriframe_label'])
 
 def get_processed_train_data_filepath():
     config = load_config()
@@ -197,6 +210,21 @@ def get_valid_crop_faces_data_path():
 def get_test_crop_faces_data_path():
     config = load_config()
     return config['features']['test_crop_faces']
+
+
+def get_train_mrip2p_png_data_path():
+    config = load_config()
+    return config['features']['train_mrip2p_faces']
+
+
+def get_valid_mrip2p_png_data_path():
+    config = load_config()
+    return config['features']['valid_mrip2p_faces']
+
+
+def get_test_mrip2p_png_data_path():
+    config = load_config()
+    return config['features']['test_mrip2p_faces']
 
 
 def get_train_optical_flow_data_path():

@@ -19,6 +19,9 @@ data_path:
   train_optframe_label: 'train_optframe_label.csv'
   valid_optframe_label: 'valid_optframe_label.csv'
   test_optframe_label: 'test_optframe_label.csv'
+  train_mriframe_label: 'train_mriframe_label.csv'
+  valid_mriframe_label: 'valid_mriframe_label.csv'
+  test_mriframe_label: 'test_mriframe_label.csv'
 data_augmentation:
   plan_pkl_filename: 'data_augmentation_plan.pkl'
   plan_txt_filename: 'data_augmentation_plan.txt'
@@ -41,27 +44,38 @@ features:
   train_optical_png: '/home/therock/data2/data_workset/dfdc/optical_png/train/'
   valid_optical_png: '/home/therock/data2/data_workset/dfdc/optical_png/valid/'
   test_optical_png: '/home/therock/data2/data_workset/dfdc/optical_png/test/'
+  train_mrip2p_faces: '/home/therock/data2/data_workset/dfdc/mri_p2p_png/train/'
+  valid_mrip2p_faces: '/home/therock/data2/data_workset/dfdc/mri_p2p_png/valid/'
+  test_mrip2p_faces: '/home/therock/data2/data_workset/dfdc/mri_p2p_png/test/'
   face_location_video_data_path: 'face_location_video_data'
+  train_xray_png: '/home/therock/data2/data_workset/dfdc/xray'
+  xray_metadata_csv: 'xray_metadata.csv'
+  xray_pairs_train_csv: 'xray_pairs_train.csv'
+  xray_pairs_test_csv: 'xray_pairs_test.csv'
+  blank_png: 'blank.png'
+  pix2pixMRI_GAN_weights: 'pix2pixMRI_GAN_weights.chkpt'
 cnn_encoder:
+  #default: 'tf_efficientnet_b7_ns'
   default: 'tf_efficientnet_b0_ns'
 training:
   train_size: 1
   valid_size: 1
   test_size: 1
-  checkpoint_path: 'checkpoints'
   params:
     model_name: 'DeepFakeDetectModel_6'
+    label_smoothing: 0.1
     train_transform: 'simple'
     #train_transform: 'complex'
     batch_format: 'simple'
     #batch_format: 'stacked'
     epochs: 20
     learning_rate: 0.001
-    batch_size: 128
+    batch_size: 192
     fp16: True
     opt_level: 'O0'
     dataset: 'optical'
     #dataset: 'plain'
+
 logging:
   root_log_dir: logs
   line_len: 80
@@ -75,4 +89,4 @@ logging:
   model_accuracy_png: 'model_accuracy.png'
   model_loss_png: 'model_loss.png'
   all_samples_pred_csv: 'all_samples_pred.csv'
-
+  model_roc_png: 'model_roc.png'

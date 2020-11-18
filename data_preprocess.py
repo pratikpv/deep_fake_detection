@@ -574,6 +574,9 @@ def generate_frame_label_csv(mode=None, dataset=None):
         elif dataset == 'optical':
             csv_file = get_train_optframe_label_csv_path()
             crop_path = get_train_optical_png_data_path()
+        elif dataset == 'mri':
+            csv_file = get_train_mriframe_label_csv_path()
+            crop_path = get_train_mrip2p_png_data_path()
         else:
             raise Exception('Bad dataset')
     elif mode == 'valid':
@@ -584,6 +587,9 @@ def generate_frame_label_csv(mode=None, dataset=None):
         elif dataset == 'optical':
             csv_file = get_valid_optframe_label_csv_path()
             crop_path = get_valid_optical_png_data_path()
+        elif dataset == 'mri':
+            csv_file = get_valid_mriframe_label_csv_path()
+            crop_path = get_valid_mrip2p_png_data_path()
         else:
             raise Exception('Bad dataset')
 
@@ -595,6 +601,9 @@ def generate_frame_label_csv(mode=None, dataset=None):
         elif dataset == 'optical':
             csv_file = get_test_optframe_label_csv_path()
             crop_path = get_test_optical_png_data_path()
+        elif dataset == 'mri':
+            csv_file = get_test_mriframe_label_csv_path()
+            crop_path = get_test_mrip2p_png_data_path()
         else:
             raise Exception('Bad dataset')
     else:
@@ -760,6 +769,12 @@ def main():
             print(f'Generating frame_label csv for processed {m} samples')
             generate_frame_label_csv(mode=m, dataset='optical')
 
+    if args.gen_mri_frame_label:
+        modes = ['train', 'valid', 'test']
+        for m in modes:
+            print(f'Generating frame_label csv for processed {m} samples')
+            generate_frame_label_csv(mode=m, dataset='mri')
+
     if args.count_faces:
         print('Count faces detected in train dataset')
         count_faces_detected(get_train_crop_faces_data_path(), get_train_facecount_csv_filepath())
@@ -835,6 +850,9 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--gen_opt_frame_label', action='store_true',
                         help='Generate csv for each frame and label pair using optical flow data',
+                        default=False)
+    parser.add_argument('--gen_mri_frame_label', action='store_true',
+                        help='Generate csv for each frame and label pair using MRI data',
                         default=False)
     parser.add_argument('--count_faces', action='store_true',
                         help='Generate csv with count of faces detected in each sample',

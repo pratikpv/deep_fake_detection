@@ -112,6 +112,45 @@ def generate_xray_pairs_dfdc(metadata_csv, pairs_train_csv, pairs_test_csv):
     test.to_csv(pairs_test_csv)
 
 
+def extract_mri_pix2pix_bathch(crops_path, mri_path):
+    print(f'Crops dir {crops_path}')
+    print(f'MRI dir {mri_path}')
+
+    video_ids_path = glob(crops_path + "/*")
+    video_ids_len = len(video_ids_path)
+    imsize = 256
+
+    keep_trying = True
+    MAX_RETRIES = 0
+    retry_count = MAX_RETRIES
+    processes = 2
+    while keep_trying:
+        try:
+            with multiprocessing.Pool(processes=processes) as pool:
+                jobs = []
+                results = []
+                for vidx in tqdm(range(video_ids_len), desc="Scheduling jobs"):
+                    jobs.append(pool.apply_async(generate_mri_p2p_data,
+                                                 (crops_path, mri_path,
+                                                  os.path.basename(video_ids_path[vidx]), imsize)
+                                                 )
+                                )
+
+                for job in tqdm(jobs, desc="Generating MRI data"):
+                    results.append(job.get())
+
+                keep_trying = False
+        except RuntimeError:
+            if retry_count <= 0:
+                processes = max(processes - 1, 1)
+                print(f'Retry with lower number of processes. processes = {processes}')
+                retry_count = MAX_RETRIES
+            else:
+                print(f'Retry with same number of processes. retry_count = {retry_count}')
+                retry_count -= 1
+            pass
+
+
 def main():
     if args.encode_video_frames:
         print('Encoding video frames for training data')
@@ -141,6 +180,14 @@ def main():
         # generate csv with [face_image, xray_image] as columns using xray metadata cvs.
         generate_xray_pairs_dfdc(get_xray_metadata_csv(), get_xray_pairs_train_csv(), get_xray_pairs_test_csv())
 
+    if args.extract_mri:
+        print('Generating MRIs using pix2pix MRI for train')
+        extract_mri_pix2pix_bathch(get_train_crop_faces_data_path(), get_train_mrip2p_png_data_path())
+        print('Generating MRIs using pix2pix MRI for valid')
+        extract_mri_pix2pix_bathch(get_valid_crop_faces_data_path(), get_valid_mrip2p_png_data_path())
+        print('Generating MRIs using pix2pix MRI for test')
+        extract_mri_pix2pix_bathch(get_test_crop_faces_data_path(), get_test_mrip2p_png_data_path())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract features from DFDC')
@@ -154,11 +201,15 @@ if __name__ == '__main__':
                         default=False)
 
     parser.add_argument('--gen_xray', action='store_true',
-                        help='Generate xray',
+                        help='Generate xray for training set, using given fake and real pairs',
                         default=False)
 
     parser.add_argument('--gen_xray_pairs', action='store_true',
                         help='Generate pairs for xray dataset',
+                        default=False)
+
+    parser.add_argument('--extract_mri', action='store_true',
+                        help='Generate MRI for all data, using pix2pix MRI model',
                         default=False)
 
     args = parser.parse_args()

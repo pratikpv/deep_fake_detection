@@ -48,8 +48,8 @@ def test_model(model, model_params, criterion, log_dir, model_kind):
                              std=[0.229, 0.224, 0.225]),
     ])
 
-    #num_workers = multiprocessing.cpu_count() - 2
-    num_workers = 0
+    num_workers = multiprocessing.cpu_count() - 2
+    #num_workers = 0
 
     if model_params['batch_format'] == 'stacked':
         test_dataset = DFDCDataset(test_data, mode='test', transform=test_transform,
