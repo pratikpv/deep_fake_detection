@@ -1,11 +1,12 @@
-import torch
 from features.encoders import *
 from glob import glob
 from PIL import Image
 from torchvision.transforms import transforms
-import os
-from utils import *
+from torch.utils.data import DataLoader
+from torchvision.utils import save_image
 import features.vector_flow.vector_flow as vf
+from models.meta.pix2pixMRI.model import *
+from data_utils.datasets import SimpleImageFolder
 
 
 def get_simple_transforms(imsize):
@@ -153,3 +154,67 @@ def generate_optical_flow_data(crop_faces_data_path, optical_flow_data_path, opt
 
     if delete_flow_dir:
         shutil.rmtree(os.path.join(optical_flow_data_path, video_id))
+
+
+def generate_mri_p2p_data_(crops_path, mri_path, vid, imsize):
+    mri_generator = get_pix2pixMRI_GAN(pre_trained=True).cuda()
+    vid_path = os.path.join(crops_path, vid)
+    batch_size = 128
+
+    transforms_ = transforms.Compose([
+        transforms.Resize((imsize, imsize)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    mridata = SimpleImageFolder(vid_path, transforms_=transforms_)
+    data_loader = DataLoader(mridata,
+                             batch_size=batch_size,
+                             shuffle=False,
+                             num_workers=1)
+    for frames_list in data_loader:
+        frames, frame_names = frames_list
+        frames = frames.cuda()
+        mri_images = mri_generator(frames)
+        b = mri_images.shape[0]
+        for j in range(b):
+            save_path = os.path.join(mri_path, vid, os.path.basename(frame_names[j]))
+            save_image(mri_images[j], save_path)
+
+
+def generate_mri_p2p_data(crops_path, mri_path, vid, imsize, overwrite=False):
+    vid_path = os.path.join(crops_path, vid)
+    vid_mri_path = os.path.join(mri_path, vid)
+    if not overwrite and os.path.isdir(vid_mri_path):
+        return
+    batch_size = 64
+    mri_generator = get_pix2pixMRI_GAN(pre_trained=True).cuda()
+    os.makedirs(vid_mri_path, exist_ok='True')
+    frame_names = glob(vid_path + '/*.png')
+    num_frames_detected = len(frame_names)
+    batches = list()
+
+    transforms_ = transforms.Compose([
+        transforms.Resize((imsize, imsize)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    for i in range(0, num_frames_detected, batch_size):
+        end = i + batch_size
+        if end > num_frames_detected:
+            end = num_frames_detected
+        batches.append(frame_names[i:end])
+
+    for j, frame_names_b in enumerate(batches):
+        frames = []
+        for k, fname in enumerate(frame_names_b):
+            frames.append(transforms_(Image.open(frame_names[k])))
+
+        frames = torch.stack(frames)
+        frames = frames.cuda()
+        mri_images = mri_generator(frames)
+        b = mri_images.shape[0]
+        for l in range(b):
+            save_path = os.path.join(vid_mri_path, os.path.basename(frame_names_b[l]))
+            save_image(mri_images[l], save_path)
