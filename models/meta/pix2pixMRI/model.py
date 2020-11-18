@@ -1,7 +1,7 @@
-
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+from utils import *
 
 
 def weights_init_normal(m):
@@ -132,3 +132,18 @@ class Discriminator(nn.Module):
         # Concatenate image and condition image by channels to produce input
         img_input = torch.cat((img_A, img_B), 1)
         return self.model(img_input)
+
+
+def get_pix2pixMRI_GAN_weights_path():
+    config = load_config()
+    return os.path.join(get_assets_path(), config['features']['pix2pixMRI_GAN_weights'])
+
+
+def get_pix2pixMRI_GAN(pre_trained=True):
+    generator = GeneratorUNet()
+    if pre_trained:
+        checkpoint_path = get_pix2pixMRI_GAN_weights_path()
+        checkpoint = torch.load(checkpoint_path)
+        generator.load_state_dict(checkpoint['generator_state_dict'])
+
+    return generator

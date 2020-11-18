@@ -194,8 +194,8 @@ def train_pix2pix_model(log_dir=None, train_resume_dir=None):
                 "\r[batches_done=%d] [Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f, pixel: %f, adv: %f] ETA: %s"
                 % (batches_done, e, n_epochs, i, len(train_dataloader), loss_D.item(), loss_G.item(),
                    loss_pixel.item(), loss_GAN.item(), time_left))
-            losses.append([(batches_done, loss_D.item(), loss_G.item(), loss_pixel.item(), loss_GAN.item())])
-            if batches_done % 100 == 0:
+            losses.append([(e, i, batches_done, loss_D.item(), loss_G.item(), loss_pixel.item(), loss_GAN.item())])
+            if batches_done % 200 == 0:
                 try:
                     print(f'\nGenerating samples at {generated_samples_path}')
                     # generator.eval()
@@ -214,9 +214,9 @@ def train_pix2pix_model(log_dir=None, train_resume_dir=None):
 
                     save_ssim_report(e, i, imgs, generator, device, ssim_score_file)
 
-                    np.save(losses, os.path.join(log_dir, model_params['model_name'], 'losses.npy'))
-                except Exception:
-                    print(f'Skip Generating samples')
+                    np.save(os.path.join(log_dir, model_params['model_name'], 'losses.npy'), losses)
+                except Exception as e:
+                    print(f'Exception {e}')
                     pass
             if batches_done % 2000 == 0:
                 print(f'\nSaving model checkpoint at {checkpoint_path}')
