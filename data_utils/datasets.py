@@ -106,6 +106,9 @@ class DFDCDatasetSimple(Dataset):
             elif dataset == 'optical':
                 self.labels_csv = get_train_optframe_label_csv_path()
                 self.crops_dir = get_train_optical_png_data_path()
+            elif dataset == 'mri':
+                self.labels_csv = get_train_mriframe_label_csv_path()
+                self.crops_dir = get_train_mrip2p_png_data_path()
             else:
                 raise Exception('Bad dataset in DFDCDatasetSimple')
 
@@ -117,6 +120,9 @@ class DFDCDatasetSimple(Dataset):
             elif dataset == 'optical':
                 self.labels_csv = get_valid_optframe_label_csv_path()
                 self.crops_dir = get_valid_optical_png_data_path()
+            elif dataset == 'mri':
+                self.labels_csv = get_valid_mriframe_label_csv_path()
+                self.crops_dir = get_valid_mrip2p_png_data_path()
             else:
                 raise Exception('Bad dataset in DFDCDatasetSimple')
 
@@ -127,6 +133,9 @@ class DFDCDatasetSimple(Dataset):
             elif dataset == 'optical':
                 self.labels_csv = get_test_optframe_label_csv_path()
                 self.crops_dir = get_test_optical_png_data_path()
+            elif dataset == 'mri':
+                self.labels_csv = get_test_mriframe_label_csv_path()
+                self.crops_dir = get_test_mrip2p_png_data_path()
             else:
                 raise Exception('Bad dataset in DFDCDatasetSimple')
         else:
@@ -158,6 +167,7 @@ class DFDCDatasetSimple(Dataset):
                 item['label'] = torch.tensor(label)
                 return item
             except Exception:
+                #print(f"bad {os.path.join(self.crops_dir, str(item['video_id']), item['frame'])}")
                 index = random.randint(0, self.data_len)
 
 
