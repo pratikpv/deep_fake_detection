@@ -659,7 +659,6 @@ def main():
         out_root = Path(args.train_data_root_dir).parent
         aug_output_folder = os.path.join(out_root, 'sample_augmentation')
         face_locate_out_folder = os.path.join(out_root, 'sample_augmentation_faces')
-
         print(f'aug_output_folder: {aug_output_folder}')
         print(f'face_locate_out_folder: {face_locate_out_folder}')
         print(f'Sample file: {sample_test_file}')
@@ -671,6 +670,7 @@ def main():
         test_data_augmentation(sample_test_file, aug_output_folder)
         test_data_distraction(sample_test_file, aug_output_folder)
         locate_faces_batch(aug_output_folder, face_locate_out_folder)
+
         print(f'generating poster for samples')
         generate_poster(sample_test_file, aug_output_folder, frames_count=5)
 
@@ -772,7 +772,7 @@ def main():
     if args.gen_mri_frame_label:
         modes = ['train', 'valid', 'test']
         for m in modes:
-            print(f'Generating frame_label csv for processed {m} samples')
+            print(f'Generating MRI frame_label csv for processed {m} samples')
             generate_frame_label_csv(mode=m, dataset='mri')
 
     if args.count_faces:
@@ -796,7 +796,15 @@ def main():
             if log_base not in logs_to_keep:
                 pass
                 # keep commented for now, to avoid accidentally running it :)
-                #shutil.rmtree(log_d)
+                # shutil.rmtree(log_d)
+
+    if args.stats:
+        originals_, fakes_ = get_training_reals_and_fakes(args.train_data_root_dir)
+        print(f'Train count: original={len(originals_)} fakes={len(fakes_)} total={len(originals_) + len(fakes_)}')
+        originals_, fakes_ = get_valid_reals_and_fakes()
+        print(f'Validation count: original={len(originals_)} fakes={len(fakes_)} total={len(originals_) + len(fakes_)}')
+        originals_, fakes_ = get_test_reals_and_fakes()
+        print(f'Test count: original={len(originals_)} fakes={len(fakes_)} total={len(originals_) + len(fakes_)}')
 
 
 if __name__ == '__main__':
@@ -860,7 +868,9 @@ if __name__ == '__main__':
     parser.add_argument('--clean_up_logs', action='store_true',
                         help='Clean up log dir to save disk space',
                         default=False)
-
+    parser.add_argument('--stats', action='store_true',
+                        help='Generate statistics of dataset',
+                        default=False)
     args = parser.parse_args()
     print(args)
     create_assets_placeholder()
