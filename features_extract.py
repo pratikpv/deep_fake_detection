@@ -171,11 +171,11 @@ def main():
         generate_optical_flow_data_batch(get_test_crop_faces_data_path(), get_test_optical_flow_data_path(),
                                          get_test_optical_png_data_path())
 
-    if args.gen_xray:
+    if args.gen_mri:
         print('Generating face x-ray')
         generate_xray_batch_dfdc()
 
-    if args.gen_xray_pairs:
+    if args.gen_mri_pairs:
         print('Generating x-ray pairs')
         # generate csv with [face_image, xray_image] as columns using xray metadata cvs.
         generate_xray_pairs_dfdc(get_xray_metadata_csv(), get_xray_pairs_train_csv(), get_xray_pairs_test_csv())
@@ -200,11 +200,11 @@ if __name__ == '__main__':
                         help='Generate optical flow data',
                         default=False)
 
-    parser.add_argument('--gen_xray', action='store_true',
+    parser.add_argument('--gen_mri', action='store_true',
                         help='Generate xray for training set, using given fake and real pairs',
                         default=False)
 
-    parser.add_argument('--gen_xray_pairs', action='store_true',
+    parser.add_argument('--gen_mri_pairs', action='store_true',
                         help='Generate pairs for xray dataset',
                         default=False)
 
