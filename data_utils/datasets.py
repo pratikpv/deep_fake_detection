@@ -40,54 +40,60 @@ class DFDCDataset(Dataset):
         return self.data_len
 
     def __getitem__(self, index: int):
-        video_filepath = self.data[index]
-        video_filename = os.path.basename(video_filepath)
-        video_id = os.path.splitext(video_filename)[0]
-        crops_id_path = os.path.join(self.crops_dir, video_id)
-        debug = False
-        if not debug:
-            frame_names = glob(crops_id_path + '/*_*.png')
-            # find number of faces detected in this set of crops
-            face_ids = list(
-                set([i.replace(crops_id_path + '/', '').replace('.png', '').split('_')[1] for i in frame_names]))
-            if len(face_ids) > 1:
-                # if number of faces were more than one then chose a face randomly, and get all crops for that face.
-                face_id_rand = random.choice(face_ids)
-                frame_names = glob(crops_id_path + '/*_{}.png'.format(face_id_rand))
-            num_of_frames = len(frame_names)
-            if num_of_frames == 0:
-                return None
-            if self.random_sorted:
-                # select max_num_frames frames randomly then sort them
-                frame_names = random.sample(frame_names, min(self.max_num_frames, num_of_frames))
+        while True:
+            video_filepath = self.data[index]
+            video_filename = os.path.basename(video_filepath)
+            video_id = os.path.splitext(video_filename)[0]
+            crops_id_path = os.path.join(self.crops_dir, video_id)
+            debug = False
+            if not debug:
+                frame_names = glob(crops_id_path + '/*.png')
+                # find number of faces detected in this set of crops
+                face_ids = list(
+                    set([i.replace(crops_id_path + '/', '').replace('.png', '').split('_')[1] for i in frame_names]))
+                if len(face_ids) > 1:
+                    # if number of faces were more than one then chose a face randomly, and get all crops for that face.
+                    face_id_rand = random.choice(face_ids)
+                    frame_names = glob(crops_id_path + '/*_{}.png'.format(face_id_rand))
+                num_of_frames = len(frame_names)
+                # we want at-least 80% of the max_num_frames in this sample.
+                # if they are lesser then find another sample.
+                if num_of_frames < int(0.80 * self.max_num_frames):
+                    # print(f'num_of_frames = {num_of_frames}, expected {int(0.80 * self.max_num_frames)} for {crops_id_path}')
+                    index = random.randint(0, self.data_len)
+                    #print(f' new index = {index} data_len = {self.data_len} data = {len(self.data)}')
+                    continue
+                if self.random_sorted:
+                    # select max_num_frames frames randomly then sort them
+                    frame_names = random.sample(frame_names, min(self.max_num_frames, num_of_frames))
 
-            frame_names = sorted(frame_names, key=alpha_sort_keys)
-            if num_of_frames > self.max_num_frames:
-                frame_names = frame_names[0:self.max_num_frames]
-            frames = list()
-            for f in frame_names:
-                image = Image.open(f)
-                if self.transform is not None:
-                    image = self.transform(image)
-                frames.append(image)
+                frame_names = sorted(frame_names, key=alpha_sort_keys)
+                if num_of_frames > self.max_num_frames:
+                    frame_names = frame_names[0:self.max_num_frames]
+                frames = list()
+                for f in frame_names:
+                    image = Image.open(f)
+                    if self.transform is not None:
+                        image = self.transform(image)
+                    frames.append(image)
 
-            if self.fill_empty:
-                if num_of_frames < self.max_num_frames:
-                    delta = self.max_num_frames - num_of_frames
-                    for f in range(delta):
-                        frames.append(torch.zeros_like(frames[0]))
-        else:
-            frames = list()
-            for f in range(self.max_num_frames):
-                frames.append(torch.ones(3, self.frame_dim, self.frame_dim) * (random.randint(1, 5)))
+                if self.fill_empty:
+                    if num_of_frames < self.max_num_frames:
+                        delta = self.max_num_frames - num_of_frames
+                        for f in range(delta):
+                            frames.append(torch.zeros_like(frames[0]))
+            else:
+                frames = list()
+                for f in range(self.max_num_frames):
+                    frames.append(torch.ones(3, self.frame_dim, self.frame_dim) * (random.randint(1, 5)))
 
-        frames = torch.stack(frames, dim=0)
-        label = self.lookup_table[video_filename]
-        if self.label_smoothing != 0:
-            label = np.clip(label, self.label_smoothing, 1 - self.label_smoothing)
-        label = torch.tensor(label)
-        item = (video_id, frames, label)
-        return item
+            frames = torch.stack(frames, dim=0)
+            label = self.lookup_table[video_filename]
+            if self.label_smoothing != 0:
+                label = np.clip(label, self.label_smoothing, 1 - self.label_smoothing)
+            label = torch.tensor(label)
+            item = (video_id, frames, label)
+            return item
 
     def _generate_lookup_table(self):
         df = pd.read_csv(self.labels_csv, squeeze=True, index_col=0)
@@ -167,7 +173,7 @@ class DFDCDatasetSimple(Dataset):
                 item['label'] = torch.tensor(label)
                 return item
             except Exception:
-                #print(f"bad {os.path.join(self.crops_dir, str(item['video_id']), item['frame'])}")
+                # print(f"bad {os.path.join(self.crops_dir, str(item['video_id']), item['frame'])}")
                 index = random.randint(0, self.data_len)
 
 
