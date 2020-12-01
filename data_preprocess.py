@@ -653,9 +653,9 @@ def count_faces_detected(crop_faces_data_path, csv_file):
 
 def main():
     if args.apply_aug_to_sample:
-        print('Applying augmentation and distraction to sample file')
         sample_test_file = os.path.join('dfdc_train_part_30', 'ajxcpxpmof.mp4')
         sample_test_file = os.path.join(args.train_data_root_dir, sample_test_file)
+        print(f'Applying augmentation and distraction to sample file {sample_test_file}')
         out_root = Path(args.train_data_root_dir).parent
         aug_output_folder = os.path.join(out_root, 'sample_augmentation')
         face_locate_out_folder = os.path.join(out_root, 'sample_augmentation_faces')
@@ -750,12 +750,13 @@ def main():
         validate_data_loaders(args.train_data_root_dir)
 
     if args.gen_proc_pkl:
-        print('Generating pickle file for processed training samples')
-        generate_processed_training_video_filepaths(args.train_data_root_dir)
-        print('Generating pickle file for processed validation samples')
-        generate_processed_validation_video_filepaths(get_validation_data_path())
-        print('Generating pickle file for processed test samples')
-        generate_processed_test_video_filepaths(get_test_data_path())
+        min_num_frames = 10
+        print(f'Generating pickle file for processed training samples with min_num_frames = {min_num_frames}')
+        generate_processed_training_video_filepaths(args.train_data_root_dir, min_num_frames=min_num_frames)
+        print(f'Generating pickle file for processed validation samples with min_num_frames = {min_num_frames}')
+        generate_processed_validation_video_filepaths(get_validation_data_path(), min_num_frames=min_num_frames)
+        print(f'Generating pickle file for processed test samples with min_num_frames = {min_num_frames}')
+        generate_processed_test_video_filepaths(get_test_data_path(), min_num_frames=min_num_frames)
 
     if args.gen_frame_label:
         modes = ['train', 'valid', 'test']

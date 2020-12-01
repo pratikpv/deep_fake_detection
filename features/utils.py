@@ -5,7 +5,7 @@ from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 import features.vector_flow.vector_flow as vf
-from models.meta.pix2pixMRI.model import *
+from models.meta.MRI_GAN.model import *
 from data_utils.datasets import SimpleImageFolder
 
 
@@ -157,7 +157,7 @@ def generate_optical_flow_data(crop_faces_data_path, optical_flow_data_path, opt
 
 
 def generate_mri_p2p_data_(crops_path, mri_path, vid, imsize):
-    mri_generator = get_pix2pixMRI_GAN(pre_trained=True).cuda()
+    mri_generator = get_MRI_GAN(pre_trained=True).cuda()
     vid_path = os.path.join(crops_path, vid)
     batch_size = 128
 
@@ -182,13 +182,13 @@ def generate_mri_p2p_data_(crops_path, mri_path, vid, imsize):
             save_image(mri_images[j], save_path)
 
 
-def generate_mri_p2p_data(crops_path, mri_path, vid, imsize, overwrite=False):
+def predict_mri_using_MRI_GAN(crops_path, mri_path, vid, imsize, overwrite=False):
     vid_path = os.path.join(crops_path, vid)
     vid_mri_path = os.path.join(mri_path, vid)
     if not overwrite and os.path.isdir(vid_mri_path):
         return
     batch_size = 64
-    mri_generator = get_pix2pixMRI_GAN(pre_trained=True).cuda()
+    mri_generator = get_MRI_GAN(pre_trained=True).cuda()
     os.makedirs(vid_mri_path, exist_ok='True')
     frame_names = glob(vid_path + '/*.png')
     num_frames_detected = len(frame_names)

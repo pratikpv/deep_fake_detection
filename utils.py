@@ -177,19 +177,19 @@ def get_test_json_faces_data_path():
     return config['features']['test_json_faces']
 
 
-def get_xray_metadata_csv():
+def get_mri_metadata_csv():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['xray_metadata_csv'])
+    return os.path.join(get_assets_path(), config['features']['mri_metadata_csv'])
 
 
-def get_xray_pairs_train_csv():
+def get_mri_pairs_train_csv():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['xray_pairs_train_csv'])
+    return os.path.join(get_assets_path(), config['features']['mri_pairs_train_csv'])
 
 
-def get_xray_pairs_test_csv():
+def get_mri_pairs_test_csv():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['xray_pairs_test_csv'])
+    return os.path.join(get_assets_path(), config['features']['mri_pairs_test_csv'])
 
 
 def get_blank_imagepath():
@@ -306,9 +306,9 @@ def get_test_sample_size():
     return float(config['training']['test_size'])
 
 
-def get_xray_path():
+def get_mri_path():
     config = load_config()
-    return config['features']['train_xray_png']
+    return config['features']['train_mri_png']
 
 
 def get_checkpoint_root_path():

@@ -78,7 +78,7 @@ def adaptive_video_compress(input_videofile, min_file_size, max_file_size, max_t
 
 
 def create_video_from_images(images, output_video_filename, fps=30, res=(1920, 1080)):
-    #video = cv2.VideoWriter(output_video_filename, cv2.VideoWriter_fourcc('H', '2', '6', '4'), fps, res)
+    # video = cv2.VideoWriter(output_video_filename, cv2.VideoWriter_fourcc('H', '2', '6', '4'), fps, res)
     video = cv2.VideoWriter(output_video_filename, cv2.VideoWriter_fourcc(*"mp4v"), fps, res)
     for image in images:
         video.write(image)
@@ -203,8 +203,8 @@ def get_all_training_video_filepaths(root_dir, match_proc=False, min_num_frames=
     return video_filepaths
 
 
-def generate_processed_training_video_filepaths(root_dir):
-    files = get_all_training_video_filepaths(root_dir, match_proc=True)
+def generate_processed_training_video_filepaths(root_dir, min_num_frames=10):
+    files = get_all_training_video_filepaths(root_dir, match_proc=True, min_num_frames=min_num_frames)
     print(f'num of files: {len(files)}')
     filename = get_processed_train_data_filepath()
     with open(filename, 'wb') as f:
@@ -261,17 +261,17 @@ def get_all_test_video_filepaths(root_dir, match_proc=False, min_num_frames=10):
     return video_filepaths
 
 
-def generate_processed_validation_video_filepaths(root_dir):
-    files = get_all_validation_video_filepaths(root_dir, match_proc=True)
+def generate_processed_validation_video_filepaths(root_dir, min_num_frames=10):
+    files = get_all_validation_video_filepaths(root_dir, match_proc=True, min_num_frames=min_num_frames)
     print(f'num of files: {len(files)}')
     filename = get_processed_validation_data_filepath()
     with open(filename, 'wb') as f:
         pickle.dump(files, f)
 
 
-def generate_processed_test_video_filepaths(root_dir):
+def generate_processed_test_video_filepaths(root_dir, min_num_frames=10):
     print(root_dir)
-    files = get_all_test_video_filepaths(root_dir, match_proc=True)
+    files = get_all_test_video_filepaths(root_dir, match_proc=True, min_num_frames=min_num_frames)
     print(f'num of files: {len(files)}')
     filename = get_processed_test_data_filepath()
     with open(filename, 'wb') as f:
@@ -398,3 +398,11 @@ def print_green(text):
     @param text: text to print
     """
     print('\033[32m', text, '\033[0m', sep='')
+
+
+def print_red(text):
+    """
+    print text in green color
+    @param text: text to print
+    """
+    print('\033[31m', text, '\033[0m', sep='')

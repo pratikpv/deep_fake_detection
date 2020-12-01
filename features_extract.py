@@ -2,7 +2,7 @@ import argparse
 from models.training import *
 from data_utils.utils import *
 from features.utils import *
-from features.face_xray import *
+from features.face_mri import *
 from utils import *
 from features.encoders import DeepFakeEncoder
 from datetime import datetime
@@ -57,25 +57,25 @@ def generate_optical_flow_data_batch(crop_faces_data_path, optical_flow_data_pat
             results.append(job.get())
 
 
-def generate_xray_batch_dfdc():
+def gen_face_mri_per_folder_batch():
     pairs = get_training_original_with_fakes(get_train_data_path())
     pairs_len = len(pairs)
-    xray_basedir = get_xray_path()
-    csv_file = get_xray_metadata_csv()
+    mri_basedir = get_mri_path()
+    csv_file = get_mri_metadata_csv()
     print(f'Train Crops dir {get_train_crop_faces_data_path()}')
-    print(f'Xray data dir {xray_basedir}')
-    print(f'Xray metadata csv {csv_file}')
+    print(f'MRI data dir {mri_basedir}')
+    print(f'MRI metadata csv {csv_file}')
 
     results = []
-    df = pd.DataFrame(columns=['real_image', 'fake_image', 'xray_image'])
+    df = pd.DataFrame(columns=['real_image', 'fake_image', 'mri_image'])
 
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         jobs = []
         for pid in tqdm(range(pairs_len), desc="Scheduling jobs"):
             item = pairs[pid]
-            jobs.append(pool.apply_async(gen_xray_per_folder, (item[0], item[1], xray_basedir,)))
+            jobs.append(pool.apply_async(gen_face_mri_per_folder, (item[0], item[1], mri_basedir,)))
 
-        for job in tqdm(jobs, desc="Generating xrays"):
+        for job in tqdm(jobs, desc="Generating mris"):
             results.append(job.get())
 
     for r in tqdm(results, desc='Consolidating results'):
@@ -89,18 +89,18 @@ def generate_xray_batch_dfdc():
         df.to_csv(csv_file)
 
 
-def generate_xray_pairs_dfdc(metadata_csv, pairs_train_csv, pairs_test_csv):
+def generate_mri_pairs_dfdc(metadata_csv, pairs_train_csv, pairs_test_csv):
     dfm = pd.read_csv(metadata_csv)
 
-    dff = pd.DataFrame(columns=['face_image', 'xray_image', 'class'])
+    dff = pd.DataFrame(columns=['face_image', 'mri_image', 'class'])
     dff['face_image'] = dfm['fake_image']
-    dff['xray_image'] = dfm['xray_image']
+    dff['mri_image'] = dfm['mri_image']
     dff_len = len(dff)
     dff['class'][0:dff_len] = 'fake'
 
-    dfr = pd.DataFrame(columns=['face_image', 'xray_image', 'class'])
+    dfr = pd.DataFrame(columns=['face_image', 'mri_image', 'class'])
     dfr['face_image'] = dfm['real_image']
-    dfr['xray_image'] = os.path.abspath(get_blank_imagepath())
+    dfr['mri_image'] = os.path.abspath(get_blank_imagepath())
     dfr_len = len(dfr)
     dfr['class'][0:dfr_len] = 'real'
 
@@ -112,7 +112,7 @@ def generate_xray_pairs_dfdc(metadata_csv, pairs_train_csv, pairs_test_csv):
     test.to_csv(pairs_test_csv)
 
 
-def extract_mri_pix2pix_bathch(crops_path, mri_path):
+def predict_mri_using_MRI_GAN_batch(crops_path, mri_path):
     print(f'Crops dir {crops_path}')
     print(f'MRI dir {mri_path}')
 
@@ -130,7 +130,7 @@ def extract_mri_pix2pix_bathch(crops_path, mri_path):
                 jobs = []
                 results = []
                 for vidx in tqdm(range(video_ids_len), desc="Scheduling jobs"):
-                    jobs.append(pool.apply_async(generate_mri_p2p_data,
+                    jobs.append(pool.apply_async(predict_mri_using_MRI_GAN,
                                                  (crops_path, mri_path,
                                                   os.path.basename(video_ids_path[vidx]), imsize)
                                                  )
@@ -172,21 +172,21 @@ def main():
                                          get_test_optical_png_data_path())
 
     if args.gen_mri:
-        print('Generating face x-ray')
-        generate_xray_batch_dfdc()
+        print('Generating face MRI using training dataset of DFDC')
+        gen_face_mri_per_folder_batch()
 
     if args.gen_mri_pairs:
-        print('Generating x-ray pairs')
-        # generate csv with [face_image, xray_image] as columns using xray metadata cvs.
-        generate_xray_pairs_dfdc(get_xray_metadata_csv(), get_xray_pairs_train_csv(), get_xray_pairs_test_csv())
+        print('Generating MRI pairs')
+        # generate csv with [face_image, mri_image] as columns using mri metadata cvs.
+        generate_mri_pairs_dfdc(get_mri_metadata_csv(), get_mri_pairs_train_csv(), get_mri_pairs_test_csv())
 
     if args.extract_mri:
         print('Generating MRIs using pix2pix MRI for train')
-        extract_mri_pix2pix_bathch(get_train_crop_faces_data_path(), get_train_mrip2p_png_data_path())
+        predict_mri_using_MRI_GAN_batch(get_train_crop_faces_data_path(), get_train_mrip2p_png_data_path())
         print('Generating MRIs using pix2pix MRI for valid')
-        extract_mri_pix2pix_bathch(get_valid_crop_faces_data_path(), get_valid_mrip2p_png_data_path())
+        predict_mri_using_MRI_GAN_batch(get_valid_crop_faces_data_path(), get_valid_mrip2p_png_data_path())
         print('Generating MRIs using pix2pix MRI for test')
-        extract_mri_pix2pix_bathch(get_test_crop_faces_data_path(), get_test_mrip2p_png_data_path())
+        predict_mri_using_MRI_GAN_batch(get_test_crop_faces_data_path(), get_test_mrip2p_png_data_path())
 
 
 if __name__ == '__main__':
@@ -201,15 +201,15 @@ if __name__ == '__main__':
                         default=False)
 
     parser.add_argument('--gen_mri', action='store_true',
-                        help='Generate xray for training set, using given fake and real pairs',
+                        help='Generate mri for training set, using given fake and real pairs',
                         default=False)
 
     parser.add_argument('--gen_mri_pairs', action='store_true',
-                        help='Generate pairs for xray dataset',
+                        help='Generate CSV file with pairs for mri dataset, this CSV will be used to train MRI-GAN',
                         default=False)
 
     parser.add_argument('--extract_mri', action='store_true',
-                        help='Generate MRI for all data, using pix2pix MRI model',
+                        help='Generate MRI for all data, using a trained MRI-GAN model',
                         default=False)
 
     args = parser.parse_args()

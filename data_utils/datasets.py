@@ -182,9 +182,9 @@ class MRIDataset(Dataset):
         self.transforms = transforms
 
         if mode == "train":
-            self.data_csv = get_xray_pairs_train_csv()
+            self.data_csv = get_mri_pairs_train_csv()
         elif mode == "test":
-            self.data_csv = get_xray_pairs_test_csv()
+            self.data_csv = get_mri_pairs_test_csv()
         else:
             raise Exception("Unknown mode")
 
@@ -197,7 +197,7 @@ class MRIDataset(Dataset):
             try:
                 item = self.data_dict[index].copy()
                 img_A = Image.open(str(item['face_image']))
-                img_B = Image.open(str(item['xray_image']))
+                img_B = Image.open(str(item['mri_image']))
 
                 if np.random.random() < 0.5:
                     img_A = Image.fromarray(np.array(img_A)[:, ::-1, :], "RGB")

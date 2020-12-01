@@ -1,16 +1,16 @@
 import argparse
-from models.meta.pix2pixMRI.training import *
+from models.meta.MRI_GAN.training import *
 from utils import *
 
 
 def main():
     log_dir = print_banner()
     if args.train_from_scratch:
-        print(f'Training pix2pix from scratch')
-        train_pix2pix_model(log_dir=log_dir)
+        print(f'Training MRI-GAN from scratch')
+        train_MRI_GAN_model(log_dir=log_dir)
     if args.train_resume_checkpoint_dir:
         print(f'Resume pix2pix training from checkpoint {args.train_resume_checkpoint_dir}')
-        train_pix2pix_model(log_dir, train_resume_dir=args.train_resume_checkpoint_dir)
+        train_MRI_GAN_model(log_dir, train_resume_dir=args.train_resume_checkpoint_dir)
 
 
 if __name__ == '__main__':

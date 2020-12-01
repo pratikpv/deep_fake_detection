@@ -11,10 +11,10 @@ from torch.autograd import Variable
 import multiprocessing
 from data_utils.datasets import MRIDataset
 from models.utils import *
-from models.meta.pix2pixMRI.model import *
+from models.meta.MRI_GAN.model import *
 import torch.nn as nn
 import torch.nn.functional as F
-from skimage.measure import compare_ssim
+from skimage.metrics import structural_similarity
 
 
 def save_ssim_report(epoch, batch_num, imgs, generator, device, ssim_score_file):
@@ -28,7 +28,7 @@ def save_ssim_report(epoch, batch_num, imgs, generator, device, ssim_score_file)
     for i in range(imgs_len):
         image1 = np.transpose(real_B[i], (1, 2, 0))
         image2 = np.transpose(fake_B[i], (1, 2, 0))
-        d, a = compare_ssim(image1, image2, multichannel=True, full=True)
+        d, a = structural_similarity(image1, image2, multichannel=True, full=True)
         scores.append(a)
 
     with open(ssim_score_file, 'a') as f:
@@ -36,7 +36,7 @@ def save_ssim_report(epoch, batch_num, imgs, generator, device, ssim_score_file)
         f.write(data)
 
 
-def train_pix2pix_model(log_dir=None, train_resume_dir=None):
+def train_MRI_GAN_model(log_dir=None, train_resume_dir=None):
     n_epochs = 100
     batch_size = 128
     test_sample_size = 16
@@ -48,7 +48,7 @@ def train_pix2pix_model(log_dir=None, train_resume_dir=None):
 
     model_params = {}
     model_params['imsize'] = 256
-    model_params['model_name'] = 'pix2pixMRI'
+    model_params['model_name'] = 'MRI_GAN'
     model_params['logdir'] = log_dir
     model_params['n_epochs'] = n_epochs
     model_params['batch_size'] = batch_size

@@ -134,15 +134,15 @@ class Discriminator(nn.Module):
         return self.model(img_input)
 
 
-def get_pix2pixMRI_GAN_weights_path():
+def get_MRI_GAN_weights_path():
     config = load_config()
-    return os.path.join(get_assets_path(), config['features']['pix2pixMRI_GAN_weights'])
+    return os.path.join(get_assets_path(), config['features']['MRI_GAN_weights'])
 
 
-def get_pix2pixMRI_GAN(pre_trained=True):
+def get_MRI_GAN(pre_trained=True):
     generator = GeneratorUNet()
     if pre_trained:
-        checkpoint_path = get_pix2pixMRI_GAN_weights_path()
+        checkpoint_path = get_MRI_GAN_weights_path()
         checkpoint = torch.load(checkpoint_path)
         generator.load_state_dict(checkpoint['generator_state_dict'])
 
