@@ -67,7 +67,7 @@ Using MRI-GAN, we have generated MRIs of all samples in the dataset. Just like â
 
 Figure below shows the model architecture used for classification. In Step 1, we provide an input image to the model. This image can be a plain frame, Optical Flow image, or MRI of the face. The input image is expected to be 224 x 224 to match the native size of the Efficient-Net B0 model. The pre-trained Efficient-Net B0 is deployed at Step 2, in our model to extract the convolution features of the input image. Â At Step 3 we apply adaptive average pooling. The output of Step 3 is flattened and sent to the classifier in Step 4. The classifier is two layers of fully connected MLP with dropout and Relu activation applied in between. Finally Step 6 is the final output of the model which is a single neuron to indicate if the input image is fake or real. We aggregate the results of the frames to quantify the entire video.
 
-<img src="https://github.com/pratikpv/deep_fake_detection/blob/master/images/Picture7.png" width=110% height=150%>
+<img src="https://github.com/pratikpv/deep_fake_detection/blob/master/images/Picture7.png" width=80% height=70%>
 
 
 # Confusion-matrix for all three methods (Plain-frames, Optical-flow, MRI-gan-based)
